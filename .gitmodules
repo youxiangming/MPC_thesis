@@ -1,0 +1,3 @@
+[submodule "wzl-latex"]
+	path = wzl-latex
+	url = https://git-ce.rwth-aachen.de/wzl-mq-public/templates/wzl-latex.git

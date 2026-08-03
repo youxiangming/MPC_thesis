@@ -1,4 +1,4 @@
-# Reference LaTeX template (kept locally, not tracked)
+# Local unpack of the template (superseded by git submodule wzl-latex/)
 wzl-latex-master/
 materials/
 # Locally downloaded build tools (tectonic, biber binaries)
