@@ -1,0 +1,56 @@
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+
+## Intermediate documents:
+*.dvi
+*.xdv
+*-converted-to.*
+# these rules might exclude image files for figures etc.
+# *.ps
+# *.eps
+# *.pdf
+*.tdo
+
+
+## Bibliography auxiliary files (bibtex/biblatex/biber):
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+## Build tool auxiliary files:
+*.fdb_latexmk
+*.synctex
+*.synctex.gz
+*.pdfsync
+
+## Build tool directories for auxiliary files
+# latexrun
+latex.out
+main.pdf
+*WZLstyle.xml
+# *.pdf
+*.bbl-SAVE-ERROR
+*.bcf-SAVE-ERROR
+*.glo
+*.ist
+*.slo
+*.sls
+*.slg
+*.gls
+*.glg
+main.synctex(busy)
+main-embed.pdf

@@ -1,0 +1,131 @@
+
+
+%% COLORS
+
+    % Setup Colors
+    \RequirePackage{xcolor}
+    \input{format/rwthcolors/LaTeX/rwthcolors}
+
+%% MAFFS
+
+    %% Standard math packages
+    \RequirePackage[intlimits]{amsmath}
+    \RequirePackage{amsfonts}
+    \RequirePackage{amssymb}
+    \RequirePackage{enumitem}
+
+
+    %% Enable bold font within math environments
+    \RequirePackage{bm}
+
+    %% Listings
+
+    %% Package for creating listing with \enumerate
+    %% NOTE: 'enumerate' conflicts with 'enumitem' (loaded above) and breaks
+    %% plain \begin{enumerate}. enumitem is a superset, so this is disabled.
+    %\RequirePackage{enumerate}
+
+    
+    \RequirePackage{unicode-math}
+    \ifnum\usefiramath=1
+        \message{usefiramath: Fira Math selected}
+        \usepackage{firamath-otf}
+        \setmathfont{Fira Math}
+        % Fallback range for dots/emoji glyphs; only if the font is present.
+        \IfFontExistsTF{Latin Modern Math}{%
+            \setmathfont[range={"22EF, "22EE, "22F1, "2700-"27BF,"1F600-"1F64F}]{Latin Modern Math}%
+        }{}
+    \else
+        \message{usefiramath: Default math font selected}
+    \fi
+
+    % The maximum number of columns in a matrix is determined by the counter MaxMatrixCols
+    \setcounter{MaxMatrixCols}{32}
+
+    % Set Referencename for equations
+    \def\equationautorefname{eq.}
+
+
+%% TODO-Notes
+    %% Use \todo{} for inline-todo notes
+    \RequirePackage[color=RWTHBlau25]{todonotes} %% Use \todo{} for inline-todo notes
+
+    % Make all todonotes inline
+    \RequirePackage{regexpatch}
+    \makeatletter
+    \xpatchcmd{\@todo}{\setkeys{todonotes}{#1}}{\setkeys{todonotes}{inline,#1}}{}{}
+    \makeatother
+
+%% HARVEY-BALLS
+    \def\harveyBallsSize{0.85ex}%size of the harvey balls
+    \def\harveyBallsAngle{120}%size of the harvey balls
+    \def\harveyBallsLineWidth{0.2pt}%line width of the harvey balls
+    \def\harveyBallsColor{RWTHBlau100}
+    \def\harveyBallsLineColor{RWTHBlau100}
+
+    \DeclareRobustCommand{\harveyBallNone}[1][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \draw[draw=black,line width=\harveyBallsLineWidth] (0,0) circle (#1);%
+        \end{tikzpicture}\xspace%
+    }%
+    \DeclareRobustCommand{\harveyBallQuarter}[1][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \draw[draw=RWTHBordeaux100,line width=\harveyBallsLineWidth](0,0) circle (#1);%
+            \fill[fill=RWTHBordeaux100] (0,0) -- (#1,0mm) arc (0:90:#1) -- cycle;%
+        \end{tikzpicture}\xspace%
+    }%
+    \DeclareRobustCommand{\harveyBallHalf}[1][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \draw[draw=RWTHOrange100,line width=\harveyBallsLineWidth](0,0) circle (#1);%
+            \fill [fill=RWTHOrange100] (0,0) -- (0mm,#1) arc (90:-90:#1) -- cycle;%
+        \end{tikzpicture}\xspace%
+    }%
+    \DeclareRobustCommand{\harveyBallThreeQuarter}[1][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \draw[draw=RWTHMaigruen100,line width=\harveyBallsLineWidth](0,0) circle (#1);%
+            \fill [fill=RWTHMaigruen100] (0,0) -- (0mm,#1) arc (90:-180:#1) -- cycle;%
+        \end{tikzpicture}\xspace%
+    }%
+    \DeclareRobustCommand{\harveyBallFull}[1][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \filldraw[draw=RWTHGruen100,fill=RWTHGruen100,line width=\harveyBallsLineWidth] (0,0) circle (#1);%
+        \end{tikzpicture}\xspace%
+    }%
+
+    \DeclareRobustCommand{\harveyBallCustom}[3][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \draw[draw=#3,line width=\harveyBallsLineWidth](0,0) circle (#1);%
+            \fill [fill=#3] (0,0) -- (0mm,#1) arc (90:-#2:#1) -- cycle;%
+        \end{tikzpicture}\xspace%
+    }%
+    \DeclareRobustCommand{\harveyBallCustomWhite}[3][\harveyBallsSize]{%
+        \begin{tikzpicture}%
+            \filldraw[draw=White,fill=White,line width=\harveyBallsLineWidth*2](0,0) circle (#1);%
+            \draw[draw=#3,line width=\harveyBallsLineWidth](0,0) circle (#1);%
+            \fill [fill=#3] (0,0) -- (0mm,#1) arc (90:-#2:#1) -- cycle;%
+        \end{tikzpicture}\xspace%
+    }%
+
+%%% MISC
+
+    %% Context sensitive quoting
+    \RequirePackage{csquotes}
+
+    %% Insert current date and time
+    \usepackage{datetime}
+    \newdateformat{verbosedate}{\the\day. \monthname[\THEMONTH] \THEYEAR}
+    
+    % Package to create a dummy text with \blindtext
+    \RequirePackage{blindtext}
+
+    %% For inserting external PDFs
+    \RequirePackage{pdfpages}
+
+
+
+
+
+
+
+
+

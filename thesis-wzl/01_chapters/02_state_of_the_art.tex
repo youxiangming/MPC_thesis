@@ -1,0 +1,254 @@
+% !TeX root = ../main.tex
+\chapter{State of the Art in Whole-Body Motion Planning for Mobile
+  Manipulators}
+\label{ch:sota}
+
+The previous chapter argued that the Line-less Mobile Assembly System
+(LMAS) setting calls for whole-body motion planning rather than a
+decoupled base--arm pipeline. This chapter surveys how the literature
+approaches the problem and narrows the field down to the framework used
+in the remainder of this thesis. \Cref{sec:sota-classification}
+introduces a classification of motion-planning approaches for mobile
+manipulators. \Cref{sec:sota-holistic} then focuses on \emph{holistic}
+(whole-body) planners, presenting the \ocs{} framework
+(\cref{sec:sota-ocs2}) and the main alternatives
+(\cref{sec:sota-alternatives}). \Cref{sec:sota-selection} compares the
+candidates against the requirements of the \hero{} platform and
+justifies the selection of \ocs{}. The synthesis of the applied and
+open-source landscape draws, in part, on a systematic literature review
+of whole-body motion planning and control integration in robotic
+navigation stacks carried out within the same research
+project~\cite{SantAnna2026WBMPReview}.
+
+% ---------------------------------------------------------------------
+\section{Classification of Motion Planning Approaches}
+\label{sec:sota-classification}
+
+Motion planning for mobile manipulators can be organised along a few
+largely orthogonal axes. Systematic reviews of the
+field~\cite{Sandakalum2022Survey,Thakar2023MobileManip} distinguish
+approaches primarily by \emph{how the base and the arm are coupled} and
+by \emph{the algorithmic principle} used to generate motion; a third,
+practical axis concerns \emph{where the computation happens in time}.
+
+\paragraph{Decoupled versus whole-body.}
+The first and, for this work, most important distinction is between
+\emph{decoupled} and \emph{whole-body} schemes.
+A decoupled scheme plans the base and the arm separately and in
+sequence: a navigation stack drives the base to a stand-off pose, after
+which an arm planner solves the manipulation task from that fixed base
+configuration. A whole-body scheme instead treats the base and the arm
+as a \emph{single} redundant kinematic (or dynamic) system and solves for
+their motion jointly, so that the task-space objective is distributed
+between base and arm by the planner itself. As motivated in
+\cref{sec:need-wholebody}, decoupling sacrifices reach, optimality, and
+reactivity, which is precisely what whole-body planning recovers---at the
+cost of a higher-dimensional and more tightly coupled problem.
+
+\paragraph{Algorithmic principle.}
+Independently of the coupling, the motion itself can be produced by
+different families of algorithms:
+\begin{itemize}
+  \item \textbf{Sampling-based planning} explores the configuration space
+        by randomly sampling and connecting collision-free states (for
+        example Rapidly-exploring Random Trees and Probabilistic
+        Roadmaps, as exposed through MoveIt~\cite{moveit2}). These methods
+        excel at finding feasible paths in cluttered, high-dimensional
+        spaces but do not natively optimise a running cost and are
+        typically used offline.
+  \item \textbf{Optimization-based planning} formulates motion as a
+        constrained optimisation over a trajectory. When the optimisation
+        is solved once, offline, over a full trajectory, one speaks of
+        \emph{trajectory optimization}; when it is re-solved online over a
+        receding horizon, the same principle becomes \emph{Model
+        Predictive Control} (\mpc{})~\cite{Rawlings2017MPC}. Both handle
+        joint, velocity, and collision constraints explicitly and produce
+        smooth, cost-optimal motion.
+  \item \textbf{Reactive schemes} compute an instantaneous command from
+        the current state, for example through potential fields or
+        quadratic-program-based inverse kinematics (QP-IK). They are cheap
+        and fast but myopic, lacking the look-ahead needed to respect
+        long-horizon constraints.
+  \item \textbf{Learning-based schemes} replace or augment the planner
+        with a policy learned by (deep) reinforcement learning. They can
+        amortise the online cost of whole-body planning but raise
+        questions of data efficiency, safety, and sim-to-real
+        transfer~\cite{SantAnna2026WBMPReview}.
+\end{itemize}
+
+\paragraph{Offline versus online.}
+Finally, a planner may operate \emph{offline}---computing a complete
+trajectory before execution---or \emph{online}, re-planning continuously
+as new state estimates and targets arrive. Only online, feedback-driven
+planning provides the disturbance rejection required in a shared,
+changing LMAS workspace. Whole-body \mpc{} sits at the intersection of the
+\emph{whole-body}, \emph{optimization-based}, and \emph{online}
+categories, which is the region of the design space this thesis targets.
+
+% ---------------------------------------------------------------------
+\section{Overview of Holistic Motion Planners}
+\label{sec:sota-holistic}
+
+\emph{Holistic} (whole-body) planners solve for base and arm motion in a
+single formulation. In practice, the mature, deployable representatives of
+this class are almost exclusively optimization-based, because expressing
+the task in a cost function and the physical restrictions as constraints
+maps naturally onto the coupled, redundant, and constrained nature of the
+mobile-manipulation problem. A systematic review of how such controllers
+are integrated with robotic navigation stacks found that, among the
+open-source projects that couple a navigation stack with a genuine
+whole-body controller, optimal-control formulations---and the \ocs{}
+toolbox in particular---recur as a common backbone, alongside
+operational-space control, quadratic-program solvers, and, more recently,
+learned policies~\cite{SantAnna2026WBMPReview}. The following subsections
+describe \ocs{} and then position the principal alternatives against it.
+
+\subsection{The \ocs{} Framework: Optimal-Control-Based Model Predictive
+  Control}
+\label{sec:sota-ocs2}
+
+\ocs{} (\emph{Optimal Control for Switched Systems}) is an open-source
+C++ library for numerical optimal control developed at the Robotic
+Systems Lab, ETH Z\"urich~\cite{ocs2Toolbox}. It provides efficient
+solvers for continuous-time optimal-control problems---most notably
+Sequential Linear-Quadratic (SLQ) control, a constrained variant of
+differential dynamic programming (DDP)---together with the supporting
+infrastructure required to run them as an \mpc{} controller.
+
+Three features make \ocs{} well suited to whole-body mobile
+manipulation. First, it derives the cost and constraint derivatives that
+the solver needs by \emph{automatic differentiation}: the user supplies
+the model (kinematics, cost terms, constraints) symbolically, and \ocs{}
+generates and compiles efficient derivative code via CppAD/CppADCodeGen.
+Second, it exposes a \emph{reference manager} that lets the desired
+task-space trajectory be updated online, which is exactly the interface a
+target-generating node needs in order to steer the controller. Third, and
+central to a real-time deployment, \ocs{} separates the optimisation from
+the execution through an MPC--MRT split: the \mpc{} process solves the
+optimal-control problem at its own rate and publishes a \emph{policy},
+while a lightweight Model Reference Tracking (MRT) client evaluates that
+policy at the control rate to produce the instantaneous command. This
+split is what makes it possible to run the optimiser and the hardware
+interface as separate processes---even on separate machines---a property
+this thesis exploits in the distributed architecture of
+\cref{ch:integration}.
+
+\ocs{} has been demonstrated for whole-body loco-manipulation on legged
+and wheeled platforms, including a unified \mpc{} formulation for combined
+locomotion and manipulation~\cite{Sleiman2021UnifiedMPC} and perceptive
+whole-body interaction with articulated
+objects~\cite{Mittal2022Articulated}. Its lineage also includes
+foundational work on kinematic planning for non-holonomic mobile
+manipulators and whole-body \mpc{} for dynamically stable mobile
+manipulators, which the review in the same project identifies as the core
+mobile-manipulation references behind the
+toolbox~\cite{SantAnna2026WBMPReview}. This track record on hardware, its
+explicit constraint handling, and its process-separable architecture make
+it the primary candidate for the \hero{} platform.
+
+\subsection{Alternative Frameworks and Methods}
+\label{sec:sota-alternatives}
+
+Several alternatives to \ocs{} exist, spanning the algorithmic families of
+\cref{sec:sota-classification}.
+
+\paragraph{Sampling-based planning (MoveIt).}
+MoveIt~\cite{moveit2} is the de-facto standard motion-planning framework
+in the ROS ecosystem. Its strength is offline, collision-free planning
+for redundant arms in cluttered scenes; it can be extended to a mobile
+base by treating the base pose as additional planning variables. In its
+common usage, however, MoveIt underpins the \emph{decoupled}
+navigate-then-manipulate pipeline and does not, by itself, provide the
+online, coordinated base--arm feedback that whole-body \mpc{} offers. It
+is therefore the natural baseline against which a whole-body approach is
+compared rather than a competing whole-body planner.
+
+\paragraph{Other optimization-based / \mpc{} tools.}
+Beyond \ocs{}, whole-body behaviour can be realised with general-purpose
+optimal-control and \mpc{} solvers or with constraint-based task-space
+controllers. The project-internal review catalogues open-source stacks
+that integrate such controllers with a navigation stack through different
+mechanisms---replacing the Nav2 local planner via the
+\texttt{nav2\_core::Controller} plugin interface, wrapping the controller
+in \texttt{ros2\_control}, or bridging \texttt{cmd\_vel}/goal topics to a
+whole-body solver---and reports that \ocs{}-based and quadratic-program
+solvers dominate this category~\cite{SantAnna2026WBMPReview}. These tools
+are technically capable but generally require more integration effort or
+offer less mature support for the specific combination of a
+differential-drive base and a ROS~2 hardware stack targeted here.
+
+\paragraph{Reactive quadratic-program inverse kinematics.}
+QP-based inverse kinematics resolves the \ee{} task and secondary
+objectives (joint-limit avoidance, manipulability) into joint velocities
+at each control step. It is computationally light and reactive but, being
+a one-step method, cannot anticipate constraints over a horizon, which
+limits its ability to plan coordinated base--arm motion for long,
+reach-exceeding paths.
+
+\paragraph{Learning-based whole-body control.}
+A growing body of work hybridises classical navigation with reinforcement
+learning to amortise the online cost of whole-body planning, learning
+policies that map observations directly to base and arm
+commands~\cite{SantAnna2026WBMPReview}. While promising, these approaches
+introduce training-data, reproducibility, and sim-to-real-transfer
+concerns that are not aligned with the goal of this thesis---deploying a
+transparent, analysable controller on real hardware in the near term.
+
+% ---------------------------------------------------------------------
+\section{Comparison of Motion Planning Algorithms and Selection of a
+  Suitable Algorithm}
+\label{sec:sota-selection}
+
+The choice of a planner for \hero{} is driven by the requirements
+identified in \cref{ch:introduction}: coordinated whole-body motion,
+explicit handling of joint/velocity, non-holonomic, and self-collision
+constraints, online reactivity, real-time feasibility on modest on-board
+compute, and good ROS~2 support so that the controller can be integrated
+with the existing hardware stack. \Cref{tab:sota-comparison} summarises
+how the candidate approaches score against these criteria.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Comparison of motion-planning approaches for \hero{}]{%
+    Qualitative comparison of motion-planning approaches against the
+    requirements of the \hero{} platform
+    ($+$ good, $\circ$ partial, $-$ weak).}
+  \label{tab:sota-comparison}
+  \begin{tabularx}{\linewidth}{@{}Xcccc@{}}
+    \toprule
+    Criterion
+      & \shortstack{Sampling\\(MoveIt)}
+      & \shortstack{QP-IK\\(reactive)}
+      & \shortstack{Learning\\(RL)}
+      & \shortstack{Whole-body\\\mpc{} (\ocs{})} \\
+    \midrule
+    Coordinated whole-body motion & $\circ$ & $\circ$ & $+$      & $+$      \\
+    Explicit constraint handling  & $\circ$ & $\circ$ & $-$      & $+$      \\
+    Online reactivity             & $-$     & $+$     & $+$      & $+$      \\
+    Real-time feasibility         & $\circ$ & $+$     & $+$      & $\circ$  \\
+    Redundancy resolution         & $\circ$ & $+$     & $+$      & $+$      \\
+    ROS~2 maturity                & $+$     & $\circ$ & $-$      & $+$      \\
+    Transparency / analysability  & $+$     & $+$     & $-$      & $+$      \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Sampling-based planning is mature and well supported but is offline and,
+in its standard form, decoupled---disqualifying it as the primary
+whole-body planner while keeping it relevant as a baseline. Reactive
+QP-IK is fast and reactive but myopic. Learning-based control is
+attractive in principle but conflicts with the near-term, hardware-first,
+and analysability goals of this work. Whole-body \mpc{} is the only family
+that simultaneously delivers coordinated base--arm motion, explicit
+constraint handling, and online reactivity; its main drawback---the
+computational burden of solving an optimal-control problem online---is
+addressable through the MPC--MRT split and a distributed deployment
+(\cref{ch:integration}) and is quantified experimentally in
+\cref{ch:hardware}.
+
+Among whole-body \mpc{} implementations, \ocs{} is selected for its mature
+open-source implementation, its explicit constraint support, its
+demonstrated use on wheeled and legged mobile manipulators, and---decisive
+for a real-time deployment on distributed hardware---its process-separable
+MPC--MRT architecture. The remainder of this thesis therefore integrates
+and validates \ocs{}-based whole-body \mpc{} on the \hero{} platform.

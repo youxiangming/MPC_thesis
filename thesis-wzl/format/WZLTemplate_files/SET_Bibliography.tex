@@ -1,0 +1,89 @@
+
+%% bibliography for defining macros in .tex-documents
+%% processing backend: biber
+%% further explanations: https://tex.stackexchange.com/a/299286
+\RequirePackage[
+    backend=biber,
+    style=alphabetic,
+    maxalphanames=1,
+    isbn=true,
+    url=true,
+    urldate=iso,
+    giveninits=true,
+    maxnames=10,
+    date=iso,
+    seconds=true,
+    %firstinits=true
+]{biblatex}
+
+%% WZL citation style: 4 capital letters & short year
+\DeclareLabelalphaTemplate{
+    \labelelement{
+        \field[final]{shorthand}
+        \field{label}
+        \field[strwidth=4,strside=left,uppercase=true]{labelname}
+    }
+    \labelelement{
+        \field[strwidth=2,strside=right]{year}
+    }
+}
+\setlength{\biblabelsep}{2pt}
+% \RequirePackage{pdfcomment}
+% % Redefine \cite to include tooltips
+% \let\oldcite\cite
+% \renewcommand{\cite}[1]{
+% \pdftooltip{\oldcite{#1}}{\fullcite{#1}}
+% % \oldcite{#1}
+% }
+
+%% Bibliograph tweak: remove "+"-sign as an abbrevation for et. al
+\renewcommand*{\labelalphaothers}{} 
+
+%% Avoid overfull hbox in bibliography
+\emergencystretch=1em 
+
+
+
+% sourcemap configuration for lovely Citavi...
+\DeclareSourcemap{
+    \maps[
+        datatype = bibtex,
+        overwrite = true
+    ]{
+        \map{
+            \step[
+                fieldsource=doi,
+                match=\regexp{\{\\textunderscore\}|\{\\textunderscore\s+\}|\{\\_\}|\{\\_\s+\}},
+                replace=_,
+            ]}
+    }
+}
+\DeclareSourcemap{
+    \maps[datatype=bibtex]{
+        \map{
+            \step[fieldsource=url, final=true]
+            \step[fieldset=verba, origfieldval, final=true]
+            \step[fieldsource=verba, match=\regexp{\A(ht|f)tp(s)?:\/\/(www\.)?}, replace={}]
+        }
+    }
+}
+
+\DeclareFieldFormat{url}{%
+    \mkbibacro{URL}\addcolon\space
+    \href{#1}{\nolinkurl{\thefield{verba}}}
+}
+
+
+% TODO
+\newcommand{\references}{
+    \cleardoublepage
+    \sloppy
+    \stepcounter{romancounter}
+    \newcommand{\listreferencename}{\Roman{romancounter}\hspace{1em}\tmpreferencename}
+    \phantomsection\addcontentsline{toc}{chapter}{\listreferencename}
+    \thispagestyle{plain}
+    {\cftlottitlefont\listreferencename}{\cftafterlottitle}
+    \printbibliography[heading=none,title=\tmpreferencename]
+    % \printbibliography[heading=bibintoc,title=References]
+}
+

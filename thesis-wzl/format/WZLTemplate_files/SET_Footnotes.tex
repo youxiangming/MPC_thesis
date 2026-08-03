@@ -1,0 +1,19 @@
+
+
+
+%% FOOTNOTES
+\usepackage[hang,flushmargin,]{footmisc} %% Remove indentation of footnotes
+
+\setlength{\skip\footins}{1cm} % footnote margin
+\renewcommand{\footnoterule}{{\color{\chaptercolor}
+            \noindent\rule[3pt]{\textwidth}{0.4pt}
+        }
+}
+
+% disclaimer footnote
+\newcommand\disclaimer[1]{
+    \begingroup
+    \renewcommand\thefootnote{}\footnote{#1}
+    \addtocounter{footnote}{-1}
+    \endgroup
+}

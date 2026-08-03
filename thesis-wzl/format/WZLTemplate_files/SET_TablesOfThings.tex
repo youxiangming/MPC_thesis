@@ -1,0 +1,119 @@
+
+
+
+%% Placement of table of contents, list of figures and list of tables
+\renewcommand{\cfttoctitlefont}{}
+\makeatletter
+% \pretocmd{\l@subsubsection}{\vspace{5pt}}{}{} % Increase space after subsubsections
+\makeatother
+
+
+%% LOFLOT - List of figures & list of tables
+\newcommand{\loflot}{
+	%% List of figures
+	\stepcounter{romancounter}
+	\let\tmplistfigurename\listfigurename
+	\renewcommand{\listfigurename}{\Roman{romancounter}\hspace{1em}\tmplistfigurename}
+	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
+	\listoffigures
+	\newpage
+	%% List of tables
+	\stepcounter{romancounter}
+	\let\tmplisttablename\listtablename
+	\renewcommand{\listtablename}{\Roman{romancounter}\hspace{1em}\tmplisttablename}
+	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
+	\listoftables
+	\newpage
+	
+	%% Start of main text
+	\pagenumbering{arabic}
+	\setcounter{page}{1}
+	\setcounter{chapter}{0}
+	\renewcommand{\thechapter}{\arabic{chapter}}
+	
+}
+
+
+%% TOC - Table of Contents
+\newcommand{\toc}{
+	\let\tmpcontentsname\contentsname
+	\renewcommand{\contentsname}{\Roman{romancounter}\hspace{1.5em}\tmpcontentsname}
+	\cleardoublepage
+    \phantomsection
+    \addcontentsline{toc}{chapter}{\contentsname}
+	\renewcommand{\cftchapdotsep}{\cftdotsep}
+	\tableofcontents
+	% \stepcounter{romancounter}
+	\stepcounter{chapter}
+}
+\setcounter{tocdepth}{1}
+
+
+%% List of figures
+\newcommand{\lof}{
+    %% List of figures
+    \stepcounter{romancounter}
+    \let\tmplistfigurename\listfigurename
+    \renewcommand{\listfigurename}{\Roman{romancounter}\hspace{1em}\tmplistfigurename}
+    \cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
+    \listoffigures
+}
+
+
+%% List of tables
+\newcommand{\lot}{
+    \stepcounter{romancounter}
+    \let\tmplisttablename\listtablename
+    \renewcommand{\listtablename}{\Roman{romancounter}\hspace{1em}\tmplisttablename}
+    \cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
+    \listoftables
+}
+
+
+
+
+%% List of Symbols
+\newcommand{\los}{
+    \stepcounter{romancounter}
+    \newcommand{\listsymbolname}{\Roman{romancounter}\hspace{1em}\tmpsymbolname}
+    \label{ch:symbols}
+    \cleardoublepage\phantomsection
+    \thispagestyle{plain}
+    \par\nobreak
+    \printglossary[
+        title=\listsymbolname,
+        type=symbols,
+        style=symbols_style,
+    ]
+}
+
+
+%% List of Glossary
+\newcommand{\glossarylist}{
+    \stepcounter{romancounter}
+    \newcommand{\theglossaryname}{\Roman{romancounter}\hspace{1em}\tmpglossaryname}
+    \label{ch:glossary}
+    \cleardoublepage\phantomsection
+    \thispagestyle{plain}
+    \par\nobreak
+    \printglossary[
+        title=\theglossaryname,
+        type=main,
+        style=glossary_style,
+    ]
+    \newpage
+}
+
+
+%% List of acronyms
+\newcommand{\loa}{
+    \stepcounter{romancounter}
+    \newcommand{\listacronymname}{\Roman{romancounter}\hspace{1em}\tmpacronymname}
+    \cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listacronymname}
+    \label{ch:acronyms}
+    \thispagestyle{plain}
+    {\cftlottitlefont\listacronymname}{\cftafterlottitle}
+    \par\nobreak
+    \input{Usercustomised_Content/acronyms}
+    \newpage
+}

@@ -1,0 +1,180 @@
+
+% Declares the document as a twosided report document
+% The WZL Template is based on the report document template
+\LoadClass{extreport}
+
+% Choose spell check language based on language option
+\RequirePackage[\longlang]{babel}
+
+%% Input encoding (enabling special characters)
+\RequirePackage[utf8]{inputenc}
+
+%% Font encoding (specifically for fonts), makes umlauts (yes this is a real english word) searchable in the final PDF file
+\RequirePackage[T1]{fontenc}
+
+%% Font type: Latin modern
+\RequirePackage{lmodern}
+
+%% Set page geometry for A5 and A4
+\ifnum\papersize=5
+    % A5
+    \RequirePackage[
+        % showframe,
+        a5paper,
+        left=2cm,
+        right=2cm,
+        top=2cm,
+        bottom=2cm
+    ]
+    {geometry}
+    %% Adjust line spacing
+    \linespread{1.0} 
+\else
+    % A4
+    \RequirePackage[
+        % showframe,
+        a4paper,
+        left=2.5cm,
+        right=2.5cm,
+        top=2.5cm,
+        bottom=2cm
+    ]
+    {geometry}
+    %% Adjust line spacing
+    \linespread{1.5} 
+\fi
+
+%% HEADERS
+    %% Header configurations:
+    %% Odd pages:
+    %%     left chapter name; right page number
+    %% Even pages:
+    %%     left page number; right section name
+    %% If no section is defined, the chapter name
+    %% is placed on even pages as well with markboth{}
+    \RequirePackage{fancyhdr}
+    \pagestyle{fancy}
+    \fancyheadinit{\normalsize\color{\chaptercolor}}
+    \fancyhf{}
+    \renewcommand{\chaptermark}[1]{\markboth{\thechapter\ #1}{\thechapter\ #1}}
+    \renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+    \addtolength{\headheight}{\baselineskip}
+
+    \lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\nouppercase\leftmark}}
+    \rhead[\fancyplain{}{\bfseries\nouppercase\rightmark}]{\fancyplain{}{\bfseries\thepage}}
+
+    %% To overwrite plain style evoked by chapter to get headers on pages where chapters start
+    \RequirePackage{etoolbox}
+
+
+    % TODO: Wird das noch gebraucht? \patchcmd{\chapter}{\thispagestyle{plain}}{\thispagestyle{fancy}}{}{}
+
+    % TODO: Was macht das hier?
+    \fancypagestyle{plain}{%
+        \renewcommand{\headrulewidth}{0pt}%
+        \fancyhf{}%
+        \fancyhead[L]{\thepage}%
+    }
+
+
+    %% Adjust spacings and formats of titles, sections, etc:
+    %% Explanation: \titlespacing*{<command>}{<left>}{<before>}{<after>}[<right>]
+    \RequirePackage[bf]{titlesec}
+    \RequirePackage[titles]{tocloft} % Placement of table of contents, list of figures and list of tables
+    \usepackage{mfirstuc}
+
+    % Format Chapters
+    \titlespacing*{\chapter}{0pt}{-20pt}{10pt}
+    % TODO: Bei A4 anders? \titlespacing*{\chapter}{0pt}{-30pt}{0pt}
+    \setlength{\cftbeforechapskip}{3pt}
+    % \theHchapter is provided by hyperref, which is loaded later in the
+    % class; defer the redefinition to \AtBeginDocument so it is defined.
+    \AtBeginDocument{\renewcommand{\theHchapter}{\arabic{chapter}\thechapter}}
+    \newcommand{\chaptercolor}{RWTHBlau100}
+
+    % Format Sections
+    \titlespacing*{\section}{0pt}{11pt}{0pt}
+    \setlength{\cftsecnumwidth}{3em}
+    \setlength{\cftbeforesecskip}{3pt}
+
+    % Format Subsections
+    \titlespacing*{\subsection}{0pt}{6pt}{0pt}
+    \setlength{\cftsubsecnumwidth}{4em}
+
+    % Format Subsubsections
+    \setlength{\cftsubsubsecnumwidth}{4em}
+    \setlength{\cftbeforesubsubsecskip}{2pt}
+
+    % Format Paragrpahs
+    \titleformat{\paragraph}{\normalfont\normalsize\bfseries}{\theparagraph}{0em}{}
+    \titlespacing*{\paragraph}{0pt}{11pt}{0pt}
+    
+    %% No identation when a new paragraph starts
+    \setlength{\parindent}{0pt} 
+
+    %% Set distance after paragraph
+    \setlength{\parskip}{8pt}
+
+    % Create huge Numbers at the beginning of Chapters
+    \newcommand\HUGEE{\@setfontsize\Huge{40}{40}}
+    \titleformat{\chapter}[display]{
+        \HUGEE\bfseries}{
+            \raggedleft\vspace{-3cm}\colorbox{\chaptercolor}{\color{white}\rule[-0.2\baselineskip]{0pt}{3\baselineskip}\hspace{5pt}\thechapter\hspace{5pt}}}{20pt}{\Huge}
+
+
+
+    %% TODO: Wird das noch gebraucht? Avoid inserting blank pages for making sure that a new chapter starts on an odd page
+    % \renewcommand{\cleardoublepage}{\clearpage}
+
+%% FONTS
+
+    %% Subliminal refinements towards typographical perfection 
+    \RequirePackage{microtype}
+    \RequirePackage{fontspec}
+    % Arial is available on Windows/Overleaf; fall back to Fira Sans on
+    % systems (e.g. Linux/TeX Live) where Arial is not installed.
+    \IfFontExistsTF{Arial}{%
+        \newfontfamily\arialfont[NFSSFamily=arial]{Arial}%
+    }{%
+        \newfontfamily\arialfont[NFSSFamily=arial]{Fira Sans}%
+    }
+    \RequirePackage{anyfontsize} 
+    % Draconic
+    \newfontfamily\Iokharic[Path=./format/fonts/Iokharic/]{Iokharic.ttf}
+
+    % English ordinal numbers
+    \usepackage[super]{nth}
+
+    % Roman numbers with with "bars" at the top and bottom
+    \usepackage{romanbar}
+
+%% HYPHENATION
+    \usepackage[normalem]{ulem}
+    % TODO
+    \righthyphenmin=4
+    \lefthyphenmin=4
+
+    
+%% DOCUMENT STARTUP 
+    %% Start frontmatter --> roman page numbers and chapter numbers
+    \newcommand{\startfront}{
+        \pagenumbering{roman}
+        \pagestyle{fancy}
+        \renewcommand{\thechapter}{\Roman{chapter}}
+        \newcounter{romancounter}
+        \stepcounter{romancounter}
+        \setlength{\cftchapnumwidth}{2em}
+    }
+
+    %% Start of main text
+    \newcommand{\startmain}
+    {
+        \pagenumbering{arabic}
+        \setcounter{page}{1}
+        \setcounter{chapter}{0}
+        \setcounter{section}{0}
+        \renewcommand{\thechapter}{\arabic{chapter}}
+    }
+
+
+

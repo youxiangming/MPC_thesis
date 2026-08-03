@@ -1,0 +1,59 @@
+
+\usepackage[
+    hyperfirst=true,
+    automake=immediate,
+    symbols,
+    section=chapter,
+]
+{glossaries-extra}
+% Define a custom dotfill for glossaries
+\def\Dotfill{\leavevmode\xleaders\hbox to .8em{\hss.\hss}\hfill\kern0pt}
+\makeglossaries
+
+
+%% List of symbols
+\newglossarystyle{symbols_style}{
+    \setglossarystyle{long3col}
+    \renewenvironment{theglossary}%
+    {\begin{longtable}{
+            @{}p{0.15\textwidth}
+            @{\hspace{6pt}}p{\dimexpr 0.8\textwidth}<{\Dotfill}
+            @{\hspace{6pt}}p{0.05\textwidth}
+            @{}
+            }
+            }%
+            {\end{longtable}}%
+    \renewcommand*{\glossentry}[2]{
+        \glstarget{##1}{\glossentryname{##1}}% the entry name
+        % & (\glossentrysymbol{##1})% the symbol in brackets
+        & \glossentrydesc{##1}% the description 
+        & ##2% the number list in square brackets
+        \\
+    }% 
+}
+\input{Usercustomised_Content/symbols}
+
+
+%% Glossary
+\newglossarystyle{glossary_style}{
+    % \setglossarystyle{long3col}
+    \setglossarystyle{long}
+    \renewenvironment{theglossary}%
+    {\begin{longtable}
+            {
+            @{}>{\raggedright\arraybackslash}p{0.2\textwidth}
+            @{\hspace{6pt}}p{\dimexpr 0.8\textwidth-6pt}
+            % @{\hspace{6pt}}p{\dimexpr 0.7\textwidth-12pt}
+            % @{\hspace{6pt}}p{0.1\textwidth}
+            @{}
+            }}%
+            {\end{longtable}}%
+    \renewcommand*{\glossentry}[2]{
+        \glstarget{##1}{\glossentryname{##1}}% the entry name
+        % & (\glossentrysymbol{##1})% the symbol in brackets
+        & \glossentrydesc{##1}% the description 
+        % & ##2% the number list in square brackets
+        \\
+    }% 
+}
+\input{Usercustomised_Content/glossary}

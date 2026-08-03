@@ -1,0 +1,111 @@
+%% Deletable?
+
+
+    %% For inserting tabulator environments
+    \RequirePackage{Tabbing}
+
+    
+\RequirePackage{chronosys}
+\setupchronology{color=RWTHBlau25,dates=false, height=20pt}
+\setupchronoperiode{color=RWTHBlau100, textstyle=\footnotesize,dates=false,datestyle=\footnotesize\centering}
+\setupchronoevent{textstyle=\footnotesize,datestyle=\footnotesize\centering, textwidth=20ex, colorbox=white}
+
+
+
+% \RequirePackage[autoplay,loop,controls=true]{animate}
+
+\newcommand\ctformatchapter[1]{\parbox[t]{\dimexpr\textwidth-4em\relax}{\raggedright#1}}
+
+
+\renewcommand\mkbibacro[1]{{\footnotesize\MakeUppercase{#1}}}
+
+
+% coloured and framed text boxes with a heading line
+\RequirePackage{tcolorbox}
+
+\setlength{\fboxsep}{1pt}
+
+% TODO
+\newcommand{\markerbox}[2]{%
+    \begingroup%
+    \setlength{\fboxrule}{2pt}%
+    \setlength{\fboxsep}{0.5pt}%
+    \fcolorbox{#1}{white}{\textbf{#2}}%
+    \endgroup%
+}
+
+
+% -------------------- brauchen wir folgendes noch?
+
+% Create custom lengths
+\newcommand{\deflen}[2]{%      
+	\expandafter\newlength\csname #1\endcsname
+	\expandafter\setlength\csname #1\endcsname{#2}%
+}
+
+% Römische Zahlen
+\newcommand{\uproman}[1]{\uppercase\expandafter{\romannumeral#1}}
+\newcommand{\lowroman}[1]{\romannumeral#1\relax}
+
+
+
+\newif\ifrevision
+\newif\ifdeletion
+
+\revisiontrue
+\deletiontrue
+
+\ifrevision
+\newcommand\revOne[1]{\textcolor{BrickRed}{#1}}
+\newcommand\revTwo[1]{\textcolor{NavyBlue}{#1}}
+\newcommand\rev[1]{\textcolor{Green}{#1}}
+\ifdeletion
+\newcommand\del[1]{\textcolor{Red}{\sout{#1}}}
+\else 
+\newcommand\del[1]{}
+\fi
+\else
+\newcommand\revOne[1]{#1}
+\newcommand\revTwo[1]{#1}
+\newcommand\rev[1]{#1}
+\newcommand\del[1]{}
+\fi
+
+\newcommand\todoRevOne[1]{\todo[author=Review 1,color=BrickRed]{#1}}
+\newcommand\todoRevTwo[1]{\todo[author=Review 2,color=NavyBlue]{#1}}
+\newcommand\todohmt[1]{\todo[author=hmt,color=red]{#1}}
+
+
+\newcounter{hmtcomment}
+\newcommand{\hmtcomment}[1]{%
+	     \refstepcounter{hmtcomment}%
+	     {%
+		         \setstretch{0.7}% spacing
+		         \todo[color={red!60!},size=\small]{%
+		         \textbf{Comment~[Tobias~\thehmtcomment]:} #1}%
+		 }}
+
+
+		 
+% for table footnote
+% \usepackage{tablefootnote}
+%\newcolumntype{b}{X}
+%\newcolumntype{s}{>{\hsize=.7\hsize}X}
+% \usepackage{tabu}
+
+%\usepackage{footnote}
+% \usepackage{footnotehyper}
+%\usepackage[textwidth=20mm]{todonotes}
+% \reversemarginpar
+
+
+
+% \usepackage{lipsum}
+
+
+
+% Vor den Kapiteln
+% \renewcommand{\chaptercolor}{RWTHPetrol100}
+
+% Nach den Kapiteln
+% \renewcommand{\chaptercolor}{RWTHBlau100}

@@ -1,0 +1,177 @@
+% !TeX root = ../main.tex
+\chapter{Introduction to Line-less Mobile Assembly Systems}
+\label{ch:introduction}
+
+% =====================================================================
+\section{Line-less Mobile Assembly Systems and Their Implications for
+  Motion Planning}
+\label{sec:lmas}
+
+Manufacturing is increasingly shaped by short product life cycles, high
+variant diversity, and volatile demand. Rigid, station-based assembly
+lines are optimised for a fixed product mix and a stable takt time; when
+the product or the required volume changes, the physical layout, the
+material flow, and the station balancing must be reconfigured, which is
+slow and capital-intensive~\cite{Huettemann2016LMAS}. This tension
+between the demand for flexibility and the rigidity of the classical
+assembly line motivates alternative production paradigms.
+
+The \emph{Line-less Mobile Assembly System} (LMAS) is one such paradigm
+studied at the Laboratory for Machine Tools and Production Engineering
+(WZL) of RWTH Aachen University~\cite{Kern2019LMAS,Buckhorst2022LMAS}.
+Instead of fixing products, tools, and workers to a sequence of static
+stations, an LMAS treats all production resources---mobile robots,
+mobile manipulators, workpiece carriers, and human workers---as
+\emph{mobile, freely relocatable entities} in a shared shop floor. The
+assembly ``line'' is dissolved into a dynamically reconfigurable
+constellation of resources that are matched to the current order at run
+time. This yields a spatially and temporally flexible production system
+that can absorb product changes, demand fluctuations, and disturbances
+without a physical relayout.
+
+A central enabler of the LMAS concept is the \emph{mobile manipulator}: a
+robotic arm mounted on a mobile base. The mobile base provides an
+effectively unbounded workspace and the ability to reposition itself
+between and within tasks, while the arm provides the dexterity required
+for the assembly operation itself. Combining the two allows a single
+resource to service many workstations and to reach parts of a large
+workpiece that no fixed-base arm could cover.
+
+This freedom, however, changes the motion-planning problem
+fundamentally. In a classical line, an industrial arm operates in a
+carefully engineered, static cell: the part arrives at a known pose, the
+surroundings are fixed, and the arm executes largely pre-programmed
+trajectories. In an LMAS, several assumptions no longer hold:
+
+\begin{itemize}
+  \item \textbf{Large, base-dependent workspace.} The target \ee{} pose
+        may lie outside the reach of the arm from the current base pose,
+        so the base and the arm must \emph{cooperate} to accomplish a
+        single task.
+  \item \textbf{Changing, shared environment.} Resources move relative to
+        one another; the environment is neither static nor fully known in
+        advance, so trajectories cannot be fully pre-computed offline.
+  \item \textbf{Kinematic redundancy.} A mobile base combined with a
+        six-degree-of-freedom (\SI{6}{DOF}) arm is highly redundant with
+        respect to an \ee{} task. This redundancy is an opportunity---it
+        can be exploited for reach, manipulability, or obstacle
+        avoidance---but only if the planner reasons about the base and
+        the arm \emph{jointly}.
+\end{itemize}
+
+In short, the LMAS paradigm demands motion planning that is
+\emph{reactive}, that spans the \emph{combined} configuration space of
+base and arm, and that resolves the resulting redundancy in a principled
+way. This is precisely the class of problem addressed by whole-body
+motion planning, introduced next.
+
+% =====================================================================
+\section{The Need for Whole-Body Motion Planning: From Sequential to
+  Unified Approaches}
+\label{sec:need-wholebody}
+
+The most common way to command a mobile manipulator is to treat the base
+and the arm as two independent subsystems and to plan for them
+\emph{sequentially}: a navigation stack first drives the base to a
+suitable stand-off pose, and only then does an arm-motion planner (for
+example, a sampling-based planner behind MoveIt~\cite{moveit2}) compute a
+trajectory for the arm from that fixed base pose. This decoupled scheme
+is simple, modular, and reuses mature, well-tested components, which
+explains its prevalence in industry.
+
+The decoupling, however, has intrinsic limitations that become severe in
+the LMAS setting:
+
+\begin{itemize}
+  \item \textbf{Loss of optimality and reach.} Choosing the base pose
+        \emph{before} planning the arm discards the coupling between the
+        two subsystems. A base pose that looks reasonable geometrically
+        may leave the arm near a singularity or a joint limit, or may
+        make the \ee{} target unreachable, even though a jointly chosen
+        base--arm configuration exists.
+  \item \textbf{Stop-and-go behaviour.} Sequential execution---drive,
+        stop, then manipulate---prevents the base and the arm from moving
+        \emph{simultaneously}. Tasks in which the \ee{} must follow a
+        continuous path longer than the arm's reach (a common LMAS case)
+        cannot be executed smoothly this way.
+  \item \textbf{Poor disturbance rejection.} A plan computed once, for a
+        fixed base pose, cannot react to base drift, moving obstacles, or
+        an updated target without re-triggering the whole pipeline.
+\end{itemize}
+
+\emph{Whole-body motion planning} removes this artificial boundary by
+treating the mobile base and the arm as a \emph{single} redundant
+kinematic (or dynamic) system and planning their motion in one unified
+optimisation. The \ee{} task is expressed directly in task space, and the
+planner is free to distribute the required motion between the base and the
+arm according to a chosen cost criterion. This unified view directly
+addresses the limitations above: it exploits the full combined workspace,
+it produces coordinated, simultaneous base--arm motion, and---when
+embedded in a feedback loop---it can react continuously to a changing
+target and environment.
+
+Formulating whole-body planning as a receding-horizon optimal-control
+problem, i.e.\ as \emph{Model Predictive Control}
+(\mpc{})~\cite{Rawlings2017MPC}, is especially attractive for mobile
+manipulation. At each control step the planner solves a finite-horizon
+optimisation over the whole-body state and input, applies the first part
+of the resulting policy, and re-plans as new state estimates arrive.
+Constraints such as joint and velocity limits, self-collision, and the
+non-holonomic behaviour of a differential-drive base are handled inside
+the same optimisation, and the receding-horizon re-planning provides the
+reactivity that the LMAS setting requires. The open-source
+\ocs{}~(Optimal Control for Switched Systems)
+framework~\cite{ocs2Toolbox} provides a mature implementation of this
+approach and has been demonstrated for whole-body loco-manipulation on
+legged and wheeled platforms~\cite{Sleiman2021UnifiedMPC}. It is the
+framework integrated and evaluated in this work.
+
+% =====================================================================
+\section{Objectives and Structure of This Work}
+\label{sec:objectives}
+
+\paragraph{Objective.}
+The goal of this work is to \emph{integrate and validate} whole-body
+\mpc{}, based on the \ocs{} framework, on the \hero{} mobile
+manipulator---a differential-drive mobile base carrying a Universal
+Robots UR10e arm~\cite{UR10e}---and to characterise the resulting
+\ee{}-pose tracking behaviour under realistic conditions. In contrast to
+studies that remain in simulation, the emphasis here is on a
+\emph{deployable} system: the \mpc{} runs in a distributed,
+real-time software architecture on the physical robot, and its
+performance is assessed on hardware.
+
+\paragraph{Scope and contributions.}
+The concrete contributions of this thesis are:
+\begin{enumerate}
+  \item the selection of a suitable whole-body motion-planning approach
+        for the \hero{} platform, following a comparison of candidate
+        frameworks (\cref{ch:sota});
+  \item the integration of \ocs{} whole-body \mpc{} into the \hero{}
+        software stack, including a distributed host/on-board
+        architecture for real-time operation, the whole-body model and
+        its parameterisation, and the hardware and \mbox{ROS-control}
+        interfaces (\cref{ch:integration});
+  \item a simulation-based validation of the closed loop that isolates
+        the geometry, timing, and data pipeline before hardware
+        deployment (\cref{ch:simulation}); and
+  \item the deployment of the system on the physical \hero{} platform,
+        together with a discussion of the deployment challenges
+        encountered and preliminary \ee{}-tracking results
+        (\cref{ch:hardware}).
+\end{enumerate}
+
+\paragraph{Structure.}
+The remainder of this thesis is organised as follows.
+\Cref{ch:sota} reviews the state of the art in whole-body motion planning
+for mobile manipulators, classifies the main approaches, presents
+\ocs{} and alternative frameworks, and justifies the selection made here.
+\Cref{ch:integration} describes the \hero{} platform and the integration
+of \ocs{} into it: the distributed architecture, the whole-body model and
+its parameterisation, and the interfaces to the low-level control layer.
+\Cref{ch:simulation} presents the simulation-based validation using a
+kinematic closed-loop (dummy MRT) setup. \Cref{ch:hardware} reports on
+the hardware deployment, the challenges and their mitigations, and
+preliminary \ee{}-tracking results. \Cref{ch:conclusion} summarises the
+work, reflects critically on its limitations, and gives recommendations
+for resolving the remaining issues.

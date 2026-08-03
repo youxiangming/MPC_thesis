@@ -1,0 +1,76 @@
+\documentclass[
+    a4paper,        % a4paper/a5paper
+    11pt,           % 11pt for A4, 8pt for A5
+    en,             % Language [DE|EN]
+    usefiramath,    % use fira math for equations
+    sans,           % Font without serif (like Arial),
+    % twoside,
+    openright
+    ]{format/WZLTemplate}
+
+\begin{document}
+\graphicspath{{./03_figures/}}
+% Themenstellung / Topic short description
+\pagestyle{empty}
+\addtocounter{page}{-1}
+\ifnum\papersize=4
+	\begin{tikzpicture}[remember picture,overlay]
+		\node[opacity=0.4, anchor=north east,inner sep=0pt]%
+		at ($(current page.north west)+(20.5cm,-0.5cm)$)
+		{\includegraphics[width=7.67cm]{wzl_eps_hks44.pdf}};
+	\end{tikzpicture}
+\else
+	\begin{tikzpicture}[remember picture,overlay]
+		\node[opacity=0.4, anchor=north east]%
+		at (current page.north east)%
+		{\includegraphics[width=5.4cm]{wzl_eps_hks44.pdf}};
+	\end{tikzpicture}
+\fi
+
+\parindent=0em
+
+Aachen, \verbosedate\today\\
+V. Name - Tel. 0241-80 xxxxx\\[2cm]
+
+{\huge \bf Master Thesis}\\[1cm] %% EN
+
+% {\huge \bf Masterarbeit}\\[1cm] %% DE
+
+\begin{tabbing}
+	%% EN
+	for Ms./Mrs. Cand.-Ing. \quad \= Erika Mustermann\\
+	\> Matriculation number: 081511\\
+
+	%% DE 
+	%für Frau/Herrn Cand.-Ing. \quad \= Erika Mustermann\\
+	%\> Matrikelnummer: 081511\\
+
+\end{tabbing}
+
+\begin{minipage}[t]{0.1\textwidth}
+	Topic: %% EN
+	%Thema: %% DE
+	\quad
+\end{minipage}
+\begin{minipage}[t]{0.9\textwidth}
+	Entwicklung eines Werkzeugs zur Abbildung des Kommunikationsverhaltens und zur Wiederherstellung diskreter Systemzustände der Leitsoftware cosmos4.\\
+\end{minipage}
+
+The start of production for series production represents a major uncertainty and cost factor for both manufacturers and users of automated production systems. In particular, the poor planning of the production start-up requires new approaches that support the early safeguarding of the functionality and performance of automated production systems. Within the BMBF joint project Ramp-Up/2, the step from two-dimensional alphanumeric planning to an integral 3D-based digital verification of plant development and commissioning is aimed at. For this purpose, a kinematic 3D model of the production plant and all control components (NC/PLC) are simulated by virtual NC/PLC software modules and the mechanical behaviour of a machine is depicted by the Siemens Machine Simulator (MS). Based on this virtual production system, the aim of the plant development is to enable a preliminary verification of the production control software. In doing so, technical errors as well as operating and software errors are to be simulated and the reaction of the control software is to be analysed by means of diagnostic tools.
+
+Within the scope of the work, concepts and tools are to be developed which enable the testing of the functionality of a production control software. In particular, the following questions are to be dealt with: which test cases can occur, how errors/tests can be reproduced, which data are necessary for the clear diagnosis of an error and to what extent tools can be used for error correction. Based on these considerations, a concept for information visualization is to be developed and realized exemplarily. The information content as well as the temporal sequence of the information flow within the production control software should be mapped and the possibility should be provided to reset the system into a freely defined state (time). The developed concepts are to be realized exemplarily on the basis of the control software cosmos4. The functionality and performance of the developed tools will be verified using an example scenario in the Integrated Manufacturing and Assembly System (IFMS) of the WZL.\\
+
+In detail, the following subtasks have to be solved:\\
+\begin{itemize}
+	\item Introduction with the leading software cosmos4
+	\item Development of a comprehensive concept for error diagnosis and correction
+	\item Exemplary realization of a scalable information visualization and recovery
+	\item Documentation of the work
+\end{itemize}
+\vspace{4cm}
+
+Prof. Dr.-Ing. Robert Schmitt
+
+
+
+\end{document}

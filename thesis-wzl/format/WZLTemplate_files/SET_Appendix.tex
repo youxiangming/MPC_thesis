@@ -1,0 +1,21 @@
+
+% TODO
+\newcommand{\appendixheadline}{
+    \cleardoublepage
+    \stepcounter{romancounter}
+    \newcommand{\appendixhead}{\Roman{romancounter}\hspace{1em}Appendix}
+    \phantomsection\addcontentsline{toc}{chapter}{\appendixhead}
+    \thispagestyle{plain}
+    % \setcounter{section}{0} % Reset section counter
+    % \setcounter{subsection}{0} % Reset subsection counter
+    % \setcounter{subsubsection}{0} % Reset subsubsection counter
+    {\cftlottitlefont\appendixhead}{\cftafterlottitle}
+    % Redefine section numbering to include the Roman numeral
+    \renewcommand{\thesection}{\Roman{romancounter}.\arabic{section}}
+    % Redefine subsection numbering to include the new section number
+    \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+    % Redefine subsubsection numbering accordingly
+    \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+    % Redefine figure numbering if needed
+    \renewcommand{\thefigure}{\Roman{romancounter}.\arabic{figure}}
+}

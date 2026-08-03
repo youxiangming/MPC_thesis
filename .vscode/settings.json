@@ -1,0 +1,45 @@
+{
+  // ---------------------------------------------------------------
+  //  LaTeX Workshop -> build the WZL thesis with the bundled Tectonic
+  //  engine (.tools/tectonic). Tectonic runs XeTeX + biber in one
+  //  pass, so no separate latexmk/biber recipe is needed.
+  // ---------------------------------------------------------------
+  "latex-workshop.latex.tools": [
+    {
+      "name": "tectonic",
+      "command": "/home/xy/HERO-thesis/.tools/tectonic",
+      "args": [
+        "-X", "compile",
+        "%DOC_EXT%",
+        "--synctex",
+        "--keep-intermediates",
+        "--keep-logs",
+        "-Z", "shell-escape"
+      ],
+      // Tectonic shells out to `biber`, which lives in .tools/ and is not
+      // on the system PATH. Prepend .tools/ so it is found.
+      "env": {
+        "PATH": "/home/xy/HERO-thesis/.tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "tectonic",
+      "tools": ["tectonic"]
+    }
+  ],
+  "latex-workshop.latex.recipe.default": "tectonic",
+  "latex-workshop.latex.build.forceRecipeUsage": true,
+
+  // Build automatically on every save, and show the PDF in a tab.
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.view.pdf.viewer": "tab",
+
+  // Tectonic writes main.pdf next to main.tex; look for it there.
+  "latex-workshop.latex.outDir": "%DIR%",
+
+  // Keep the workspace clean-ish; do not auto-clean the aux files that
+  // Tectonic reuses for incremental rebuilds.
+  "latex-workshop.latex.autoClean.run": "never"
+}

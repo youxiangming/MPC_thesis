@@ -1,0 +1,35 @@
+% !TeX root = ../main.tex
+\chapter{Hardware Deployment and Preliminary Experimental Results}
+\label{ch:hardware}
+
+% ---------------------------------------------------------------------
+\section{Deployment on the \hero{} Platform}
+\label{sec:hw-deployment}
+
+% TODO: startup sequence (Zenoh routers paired -> host MPC -> IPC MRT
+% bridge); wired vs. wireless link (wired chosen; must be stated as a
+% run condition); first successful real-robot run milestone.
+
+% ---------------------------------------------------------------------
+\section{Deployment Challenges and Mitigations}
+\label{sec:hw-challenges}
+
+% TODO:
+%  - policy lag: solve time ~147-225 ms (mean), effective MPC rate
+%    ~4.2 Hz vs mpcDesiredFrequency=10; policyLag ~0.37 s (down 2.2x
+%    from ~0.8 s); DDP Initialization ~55.5% of solve time.
+%  - solve-time spikes (>1000 ms) vs ~1.03 s policy window -> bridge
+%    enters hold; mitigation = wider solutionTimeWindow (1.0 s),
+%    periodic re-publish, diagnostics ([policy_interp]/[policy_arrival]).
+%  - re-handshake silently overwriting reference -> 1 Hz re-publish.
+%  - cabling tethering the base (odom contamination) after switching to
+%    wired link.
+
+% ---------------------------------------------------------------------
+\section{Preliminary End-Effector Tracking Results}
+\label{sec:hw-results}
+
+% TODO: EE-pose tracking on the four-point rectangle; RMS/max per
+% straight segment and per corner; tangential lag ~ policyLag x v_ref
+% (H2, ~3.7 cm expected); closed-loop drift; per-sample join of
+% policyLag vs lag_eff. State the odom+FK internal-metrology limitation.

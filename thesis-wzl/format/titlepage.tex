@@ -1,0 +1,110 @@
+\makeatletter
+
+% Define academic degree names based on the thesis type
+\ifthenelse{\equal{\thesistype}{Dissertation}}{%
+    \def\academicdegree{Dissertation}%
+    \def\academicdegreegerman{Dissertation}%
+}{%
+    \ifthenelse{\equal{\thesistype}{PA}}{%
+        \def\academicdegree{Project Thesis}%
+        \def\academicdegreegerman{Projektarbeit}%
+    }{%
+        \ifthenelse{\equal{\thesistype}{BA}}{%
+            \def\academicdegree{Bachelor Thesis}%
+            \def\academicdegreegerman{Bachelorarbeit}%
+        }{%
+            \ifthenelse{\equal{\thesistype}{MA}}{%
+                \def\academicdegree{Master Thesis}%
+                \def\academicdegreegerman{Masterarbeit}%
+            }{%
+                % Default case
+                \def\academicdegree{Thesis}%
+                \def\academicdegreegerman{Arbeit}%
+            }}}}
+
+\begin{titlepage}
+
+    % Temporarily adjust the page margins to increase the usable space
+    % \newgeometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
+
+    \ifnum\papersize=4
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[opacity=0.4, anchor=north east,inner sep=0pt]%
+            at ($(current page.north west)+(20.5cm,-0.5cm)$)
+            {\includegraphics[width=7.67cm]{wzl_eps_hks44.pdf}};
+        \end{tikzpicture}
+    \else
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[opacity=0.4, anchor=north east]%
+            at (current page.north east)%
+            {\includegraphics[width=5.4cm]{wzl_eps_hks44.pdf}};
+        \end{tikzpicture}
+    \fi
+
+    \begin{flushleft}
+        {\small
+        The present work was submitted to the \\ \institute.\\
+        {\color{black!50} Diese Arbeit wurde vorgelegt am \institutegerman.}
+        }
+
+        \vfill
+
+        \textbf{\Large\@title}
+
+        \textbf{\Large\color{black!50}\titlegerman}
+
+    \end{flushleft}
+
+    \vspace{1cm}
+
+    \textbf{\large\academicdegree\color{black!50}\ /\ \academicdegreegerman }
+
+    \vfill
+
+    \textbf{\color{black!75}Presented by\color{black!50}\ /\ Vorgelegt von}
+
+    {\@author}\\
+    \studentid
+    \vfill
+    % Supervisor and Examiners
+    {
+        \textbf{\color{black!75}Supervised by\color{black!50}\ /\ Betreut von} \supervisor
+        \\
+        \textbf{\color{black!75}\\1\textsuperscript{st} Examiner\color{black!50}\ /\ 1. Prüfer} \firstexaminer
+        % Include 2nd examiner only if it's set
+        \ifthenelse{\equal{\secondexaminer}{}}{}{%
+            \\
+            \textbf{\color{black75}\\2\textsuperscript{nd} Examiner\color{black!50}\ /\ 2. Prüfer} \secondexaminer
+        }
+    }
+
+    \begin{flushright}
+        {\small
+            Aachen, \@date
+        }
+    \end{flushright}
+
+    \vfill
+
+    % Include the disclaimer text on the title page if applicable
+    \ifthenelse{\equal{\thesistype}{Dissertation}}{}{%
+        % Reduce vertical space before the disclaimer
+        \vspace{0.5cm}
+        \noindent {\footnotesize
+            Inhalt und Ergebnis dieser Arbeit sind ausschließlich zum internen Gebrauch bestimmt. Alle Urheberrechte liegen bei der RWTH Aachen. Ohne ausdrückliche Genehmigung des betreuenden Lehrstuhls ist es nicht gestattet, diese Arbeit oder Teile daraus an Dritte weiterzugeben.
+
+            \medskip
+
+            \textit{The content and results of this thesis are intended exclusively for internal use. All copyrights are held by RWTH Aachen University. Without the express permission of the supervising department, it is not permitted to pass this thesis or parts thereof to third parties.}
+        }
+    }
+
+    % Reset page geometry back to normal
+    \restoregeometry
+
+\end{titlepage}
+
+
+\makeatother
+
+\newpage\thispagestyle{empty}\null

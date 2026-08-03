@@ -1,0 +1,41 @@
+stages:
+  - build
+  - drawio
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+Build:
+  image:
+    name: "markpsanders/tinytex-build:latest"
+  stage: build
+  timeout: 20m
+  script:
+    - cat /etc/os-release
+    - uname -r
+    - echo $PATH
+
+    - cd format/fonts/Fira/
+
+    - unzip Fira_Sans.zip
+    - mkdir -p /usr/share/fonts/truetype/FiraSans/
+    - cp *.ttf /usr/share/fonts/truetype/FiraSans/
+
+    - mkdir -p /usr/share/fonts/opentype/FiraMath/
+    - cp *.otf /usr/share/fonts/opentype/FiraMath/
+
+    - fc-cache -fv
+    - cd ../../..
+
+    # - tlmgr update --self --all
+    - tlmgr install `cat texlive_packages.txt`
+    - ls -al
+    - latexmk -synctex=1 --shell-escape --interaction=nonstopmode -file-line-error -xelatex main
+    - latexmk -synctex=1 --shell-escape --interaction=nonstopmode -file-line-error -xelatex 02_documents/topic_description.tex
+  tags:
+    - docker
+    - amd64
+  artifacts:
+    paths:
+      - ./main.pdf
+      - ./topic_description.pdf

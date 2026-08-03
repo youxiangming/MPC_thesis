@@ -1,0 +1,57 @@
+
+
+% TODO
+\newcommand{\infocolorbox}[2][\chaptercolor]{%
+    \begin{tcolorbox}[colback=#1!5!white, colframe=#1!50!white]
+        #2
+    \end{tcolorbox}
+}
+
+% TODO
+\newenvironment{sectionabstract}[1]{
+    \infocolorbox{#1}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{adjustbox}{max width=\textwidth}
+        \begin{tabular}{@{}>{\bfseries}p{0.25\linewidth}>{\arraybackslash}p{0.75\linewidth}@{}}  % Two columns in the table with no inter-column space at the end
+            }
+            {
+        \end{tabular}
+    \end{adjustbox}\\[8pt] % Adjust the default vertical spacing here
+}
+
+
+% Summary Boxes
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems}
+% Exkursboxen:
+\usepackage{framed}
+
+\makeatletter
+\newtcbtheorem{Summary}{\bfseries Zusammenfassung}{
+	code={\edef\@currentlabelname{#2}}
+	%enhanced,
+	%drop shadow={black!50!white},
+	%coltitle=black,
+	%top=0.3in,
+	%attach boxed title to top left=
+	%	{xshift=1.5em,
+	%	yshift=-\tcboxedtitleheight/2},
+	%boxed title style={size=small,colback=pink}
+}{summary}
+\makeatother
+
+\makeatletter
+\newtcbtheorem{Definition}{\bfseries Definition}{
+	code={\edef\@currentlabelname{#2}},
+	% enhanced,
+	sharp corners,
+	%drop shadow={black!50!white},
+	coltitle=black,
+	colframe=black!20!white,
+	%top=0.3in,
+	%attach boxed title to top left=
+	%	{xshift=1.5em,
+		%	yshift=-\tcboxedtitleheight/2},
+	colback=white
+}{definition}
+\makeatother

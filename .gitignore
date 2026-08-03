@@ -1,0 +1,30 @@
+# Reference LaTeX template (kept locally, not tracked)
+wzl-latex-master/
+materials/
+# Locally downloaded build tools (tectonic, biber binaries)
+.tools/
+
+.cursor/
+
+# LaTeX build artifacts (belt-and-suspenders; subfolders have their own too)
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bcf
+*.blg
+*.bbl
+*.run.xml
+*.xdv
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.glo
+*.gls
+*.glg
+*.ist
+*.slo
+*.sls
+*.slg

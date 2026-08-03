@@ -1,0 +1,16 @@
+% !TeX root = ../main.tex
+% Custom packages added on top of the WZL class.
+% NOTE: the class already loads graphicx, caption, subcaption, booktabs,
+% tabularx, float, amsmath, amssymb, bm, xcolor, hyperref, biblatex,
+% csquotes, microtype, unicode-math (Fira Math). Do NOT reload those.
+
+% --- Units & numbers -------------------------------------------------
+\usepackage{siunitx}
+\sisetup{detect-all, per-mode=symbol, group-separator={,}}
+\DeclareSIUnit{\hz}{Hz}
+
+% --- Clever cross-references (load AFTER hyperref, which the class does)
+\usepackage[capitalise,noabbrev]{cleveref}
+
+% --- Draft watermark (uncomment while drafting) ----------------------
+% \usepackage{draftwatermark}

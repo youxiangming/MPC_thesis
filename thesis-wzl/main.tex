@@ -1,0 +1,82 @@
+% !TeX root = main.tex
+% =====================================================================
+%  WZL thesis (official WZLTemplate class).
+%  Engine: XeLaTeX (--shell-escape).  Bibliography backend: biber.
+%  Build:  latexmk  (uses .latexmkrc -> xelatex)  or  see README.
+% =====================================================================
+\documentclass[
+    a4paper,        % a4paper/a5paper
+    11pt,           % 11pt for A4, 8pt for A5
+    en,             % Language [DE|EN]
+    usefiramath,    % use fira math for equations
+    sans,           % Font without serif (like Arial),
+    % twoside,
+    openright
+    ]{format/WZLTemplate}
+
+
+% ---------------------------------------------------------------------
+%  Title metadata  (TODO: verify author, chair, supervisor, examiners)
+% ---------------------------------------------------------------------
+\title{Integration and Validation of Whole-Body Model Predictive Control
+  for a Mobile Manipulator in Line-less Assembly}
+% German translation of the title (shown in grey under the English one)
+\newcommand\titlegerman{Integration und Validierung einer
+  ganzk\"orperbasierten modellpr\"adiktiven Regelung f\"ur einen mobilen
+  Manipulator in der linienlosen Montage}
+\author{[Xiangming You]}                 % TODO: fill in your full name
+\date{\today}                          % or \formatdate{dd}{mm}{yyyy}
+
+% Thesis type: PA (Projektarbeit / Project Thesis)
+\newcommand{\thesistype}{PA}           % options: PA, BA, MA, Dissertation
+\newcommand\studentid{[Matriculation No.440593]}   % TODO: fill in your student ID
+\newcommand\institute{Chair of Intelligence in Quality Sensing | WZL |
+  RWTH Aachen University}                     % TODO: verify chair
+\newcommand\institutegerman{Lehrstuhl f\"ur Informations-, Qualit\"ats-
+  und Sensorsysteme in der Produktion | WZL | RWTH Aachen}   % TODO: verify
+\newcommand\supervisor{[Guillaume Tréheux], M.Sc.}   % TODO: fill in
+\newcommand\firstexaminer{Univ.-Prof. Dr.-Ing. Robert H. Schmitt}  % TODO: verify
+\newcommand\secondexaminer{}                  % add if applicable
+
+
+% Set up Bibliography (biblatex + biber)
+\bibliography{lit/References.bib}
+
+% Set up Graphics
+\graphicspath{{./03_figures/}}
+
+%% Import Custom Packages (siunitx, cleveref, ...)
+\input{Usercustomised_Content/custom_packages}
+
+% Begin of the document
+\begin{document}
+
+%% Define own commands (\ocs, \mpc, \hero, \ee, math vectors, ...)
+\include{Usercustomised_Content/functions}
+
+%% Set up keyphrases
+\input{Usercustomised_Content/keyphrases}
+
+
+% Titlepage
+\include{format/titlepage}
+
+% -- FRONTMATTER --
+\include{frontmatter}
+
+
+% -- CHAPTERS --
+\include{01_chapters/01_introduction}
+\include{01_chapters/02_state_of_the_art}
+\include{01_chapters/03_integration}
+\include{01_chapters/04_simulation}
+\include{01_chapters/05_hardware}
+\include{01_chapters/06_conclusion}
+
+% -- LITERATURE --
+\include{format/literature}
+
+% -- APPENDIX --
+%\include{appendix}
+
+\end{document}

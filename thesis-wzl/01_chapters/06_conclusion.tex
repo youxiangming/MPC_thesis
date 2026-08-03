@@ -1,0 +1,35 @@
+% !TeX root = ../main.tex
+\chapter{Conclusion and Outlook}
+\label{ch:conclusion}
+
+% ---------------------------------------------------------------------
+\section{Summary}
+\label{sec:concl-summary}
+
+% TODO: what was achieved -- OCS2 whole-body MPC integrated and running
+% on real HERo hardware in a distributed architecture; EE tracking
+% characterised. "Everything works, but ..." -> lead into limitations
+% (residual policy lag, effective MPC rate below setpoint, internal-only
+% metrology, cabling constraint, unmodeled base acceleration limit).
+
+% ---------------------------------------------------------------------
+\section{Critical Reflection}
+\label{sec:concl-reflection}
+
+% TODO: honest appraisal -- what the results do and do not prove;
+% odom+FK measures internal consistency, not absolute accuracy; single
+% platform / limited repetitions; wired-link dependence of the numbers;
+% model mismatch (base accel limit not in OCS2 model).
+
+% ---------------------------------------------------------------------
+\section{Recommendations for Resolving Present Issues}
+\label{sec:concl-recommendations}
+
+% TODO:
+%  - reduce solve time (attack DDP Initialization ~55.5%; core pinning;
+%    evaluate useFeedbackPolicy=true) to raise effective MPC rate.
+%  - external ground truth (laser tracker / motion capture) for absolute
+%    accuracy.
+%  - EKF (robot_localization) if odom drift dominates closed-loop drift.
+%  - model the base acceleration limit inside OCS2.
+%  - Experiment B (base orbiting + fixed EE) and further variants.

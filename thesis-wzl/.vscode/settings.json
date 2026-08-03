@@ -1,0 +1,21 @@
+{
+    "files.exclude": {
+        "**/*.aux": true,
+        "**/*.bbl": true,
+        "**/*.bcf": true,
+        "**/*.blg": true,
+        "**/*.fls": true,
+        "**/*.fdb_latexmk": true,
+        "**/*.lof": true,
+        "**/*.lot": true,
+        "**/*.out": true,
+        "**/*.tdo": true,
+        "**/*.run.xml": true,
+        "**/*.toc": true,
+        "**/*.synctex.gz": true,
+        "**/*.xdv": true
+    },
+    "cSpell.words": [
+        "usefiramath"
+    ]
+}

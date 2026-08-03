@@ -1,0 +1,171 @@
+% Settings for pictures and tables
+
+%% GENERAL
+
+    %% FLOATS aka Figures, Tables, ToDoNotes and whatsoever
+
+    %% Strict placement of figures, tables, etc. referring to the tex source code
+    %% Usage: \begin{figure}[H]
+    \RequirePackage{float}
+
+    % Allow to insert images and tables surrounded by text
+    \RequirePackage{wrapfig}
+
+    % Allow to integrate graphics or images into LATEX
+    \RequirePackage{graphicx}
+
+    %% Placing captions within figure or table environments
+    %% Usage: \caption{Place your caption here.}
+    \RequirePackage{caption}
+    \RequirePackage{subcaption}
+
+    %% Defines a \FloatBarrier command, beyond which floats may not pass; useful, for example, to ensure all floats for a section appear before the next \section command. 
+    \RequirePackage[section]{placeins}
+
+    % minimum fraction of page for text
+    % See: https://robjhyndman.com/hyndsight/latex-floats/
+    \renewcommand{\textfraction}{0.10}
+
+    % minimum fraction of floatpage that should have floats	
+    % See: https://robjhyndman.com/hyndsight/latex-floats/
+    \renewcommand{\floatpagefraction}{0.90}
+
+    % supplement the standard graphics package, which defines the macros \resizebox, \scalebox and \rotatebox , with the macros\trimbox and \clipbox.
+    \RequirePackage{adjustbox} % For limiting table width
+
+
+%% FIGURES
+    \cftsetindents{figure}{0em}{3.5em}
+
+    % Setting up cations for figures
+    \captionsetup[figure]{
+        labelfont=bf,
+        % TODO justification=raggedright,
+        justification=justified,
+        singlelinecheck=false
+    }
+
+    
+    % automated integration of SVG graphics into LaTeX documents
+    % DISABLED: not used in this thesis, needs --shell-escape + Inkscape,
+    % and breaks the Tectonic engine. Re-enable this line if you add
+    % \includesvg{} figures (then build with XeLaTeX --shell-escape).
+    %\RequirePackage[inkscapelatex=false, inkscapepath=svgsubdir, pretex=\fontfamily{arial}\selectfont]{svg}
+
+%% TABLES
+    \cftsetindents{table}{0em}{3.5em}
+
+    %% Alternative style of tables
+    \RequirePackage{booktabs}
+
+    % 
+    \RequirePackage{tabularray}
+
+    %% Advanced table package for use-defined width definitions
+    \RequirePackage{tabularx}
+
+    % Have Tabluarx in Longtables
+    \usepackage{xltabular}
+
+    % Setting up cations for tables
+    \captionsetup[table]{
+        labelfont=bf,
+        justification=raggedright,
+        singlelinecheck=false
+    }   
+
+    % Itemize in Table
+    \newcommand{\tableitemize}{def}
+
+    % % Better cell formatting in tables
+    \usepackage{makecell} % Tabular column heads and multilined cells
+    \usepackage{diagbox} % Table heads with diagonal lines
+
+    % Have labels for tables
+    \makeatletter
+    \newcommand{\tablelabel}[2]{% \speciallabel{<stuff>}{<label>}
+        \edef\@currentlabel{#1}\label{#2}%
+    }
+    \makeatother
+
+    % Rotate tables
+    \usepackage{pdflscape}
+    \usepackage{rotating}
+    \usepackage{afterpage}
+
+
+
+%% RWTH-TABLES
+    % TODO
+    \newlength{\myleftsep}
+    \setlength{\myleftsep}{3pt}
+    \newlength{\myrightsep}
+    \setlength{\myrightsep}{3pt}
+
+    % TODO
+    \NewTblrEnviron{tblrrwth}
+    \SetTblrOuter[tblrrwth]{}
+    \SetTblrInner[tblrrwth]{
+        width = \textwidth,
+        hspan=minimal,
+        rows = {valign=m},
+        row{odd} = {RWTHBlau10},
+        row{even} = {RWTHBlau25},
+        row{1} = {c, bg=RWTHBlau100, font=\bfseries, fg=white},
+        column{1} = {font=\bfseries},
+        rowhead = 1,
+        leftsep = \myleftsep,
+        rightsep= \myrightsep,
+        baseline=t,
+        % % toprule and bottomrule
+        % hline{1,Z} = {0.08em, white},
+        % midrule 
+        hlines = {0.05em, white},
+        vlines = {0.02em, white},
+    }
+
+
+    % TODO
+    \NewTblrEnviron{tblrrwthnorowtitle}
+    \SetTblrOuter[tblrrwthnorowtitle]{}
+    \SetTblrInner[tblrrwthnorowtitle]{
+        width = \textwidth,
+        hspan=minimal,
+        rows = {valign=t},
+        row{odd} = {RWTHBlau10},
+        row{even} = {RWTHBlau25},
+        row{1} = {c, bg=RWTHBlau100, font=\bfseries, fg=white},
+        rowhead = 1,
+        leftsep = \myleftsep,
+        rightsep= \myrightsep,
+        baseline=t,
+        % % toprule and bottomrule
+        % hline{1,Z} = {0.08em, white},
+        % midrule 
+        hlines = {0.05em, white},
+        vlines = {0.02em, white},
+    }
+
+
+    % TODO
+    \NewTblrEnviron{tblrrwthz}
+    \SetTblrOuter[tblrrwthz]{}
+    \SetTblrInner[tblrrwthz]{
+        width = \textwidth,
+        hspan=minimal,
+        rows = {valign=m},
+        row{odd} = {RWTHBlau10},
+        row{even} = {RWTHBlau25},
+        row{1} = {c, bg=RWTHBlau100, font=\bfseries, fg=white},
+        row{Z} = {bg=RWTHBlau50, font=\bfseries},
+        column{1} = {font=\bfseries},
+        rowhead = 1,
+        leftsep = \myleftsep,
+        rightsep= \myrightsep,
+        baseline=t,
+        % % toprule and bottomrule
+        % hline{1,Z} = {0.08em, white},
+        % midrule 
+        hlines = {0.05em, white},
+        vlines = {0.02em, white},
+    }
