@@ -1,0 +1,4 @@
+# latexmk configuration for the thesis
+# Usage:  latexmk -pdf main.tex   (runs pdflatex + bibtex automatically)
+$pdf_mode = 1;        # produce PDF via pdflatex
+$bibtex_use = 2;      # run bibtex and clean generated .bbl on -c

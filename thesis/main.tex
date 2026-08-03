@@ -1,0 +1,59 @@
+% =====================================================================
+%  Whole-Body Motion Planning for a Line-less Mobile Assembly Robot
+%  Integration and Validation of OCS2 Model Predictive Control on HERo
+% ---------------------------------------------------------------------
+%  Build:  latexmk -pdf main.tex      (recommended; runs biber for you)
+%  See README.md for details.
+% =====================================================================
+\documentclass[11pt,a4paper,twoside,openright,numbers=noenddot]{scrreprt}
+
+\input{preamble}
+
+% ---------------------------------------------------------------------
+%  Title metadata (edit these to match your institute's template)
+% ---------------------------------------------------------------------
+\newcommand{\thesisTitle}{Integration and Validation of Whole-Body Model
+  Predictive Control for a Mobile Manipulator in Line-less Assembly}
+\newcommand{\thesisAuthor}{[Author Name]}          % TODO: fill in
+\newcommand{\thesisInstitute}{Laboratory for Machine Tools and Production
+  Engineering (WZL), RWTH Aachen University}         % TODO: verify
+\newcommand{\thesisDate}{\today}
+
+\begin{document}
+
+% --------------------------- Front matter ----------------------------
+\pagenumbering{roman}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\scshape\large \thesisInstitute\par}
+  \vspace{2.5cm}
+  {\huge\bfseries \thesisTitle\par}
+  \vspace{2.5cm}
+  {\Large \thesisAuthor\par}
+  \vfill
+  {\large \thesisDate\par}
+\end{titlepage}
+
+\cleardoublepage
+\tableofcontents
+
+% --------------------------- Main matter -----------------------------
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapters/01_introduction}
+\input{chapters/02_state_of_the_art}
+\input{chapters/03_integration}
+\input{chapters/04_simulation}
+\input{chapters/05_hardware}
+\input{chapters/06_conclusion}
+
+% --------------------------- Back matter -----------------------------
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

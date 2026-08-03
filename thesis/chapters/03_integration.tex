@@ -1,0 +1,43 @@
+\chapter{Integration of \ocs{} into the \hero{} Mobile Manipulator}
+\label{ch:integration}
+
+% ---------------------------------------------------------------------
+\section{\hero{} Platform: Differential-Drive Base and UR10e Manipulator}
+\label{sec:hero-platform}
+
+% TODO: describe HERo -- HMI differential-drive mobile base + UR10e arm,
+% arm mount offset (footprint -> ur_mount at (-0.355, -0.050, 0.830)),
+% shoulder height ~1.01 m, sensors, on-board IPC (.105), network
+% 192.168.12.0/24. Cite UR10e, HMIbase.
+
+% ---------------------------------------------------------------------
+\section{Distributed System Architecture for Real-Time \mpc{}}
+\label{sec:distributed-arch}
+
+% TODO: host (.222) runs MPC + RViz + target; IPC (.105) runs
+% hardware_control + MRT bridge. Only 3 streams cross the Zenoh
+% boundary at the MRT_ROS_Interface layer: _mpc_observation (IPC->host,
+% ~100 Hz), _mpc_policy (host->IPC), _mpc_reset service. Cite ROS2,
+% zenoh. Include architecture figure.
+
+% ---------------------------------------------------------------------
+\section{Whole-Body Model and Parameterization}
+\label{sec:wholebody-model}
+
+% TODO: WheelBasedMobileManipulator model.
+%   State  x in R^9: (px, py, psi, q_arm[0..5])
+%   Input  u in R^8: (v, omega, dq_arm[0..5])
+% Costs (EE tracking, input R.base/R.arm), constraints (joint/velocity
+% limits +-0.3, self-collision minimumDistance=0.11), horizon 1.3 s,
+% solutionTimeWindow 1.0 s, timeStep 2e-3, nThreads 8. Reference
+% task_hardware.info as the authoritative config.
+
+% ---------------------------------------------------------------------
+\section{Hardware Interfaces and ROS Control Layer Integration}
+\label{sec:hw-interfaces}
+
+% TODO: MRT bridge -> base u(0,1) as TwistStamped on /cmd_vel_ocs2
+% (twist_mux -> diff_drive_controller); arm mpcState ->
+% joint_trajectory_controller. Safety: arm per-joint rate limit,
+% OCS2-relative-time policy validity hold, observation monotonicity
+% guard, reset bounded wait. Cite ros2control.
