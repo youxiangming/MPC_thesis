@@ -42,7 +42,7 @@ as a \emph{single} redundant kinematic (or dynamic) system and solves for
 their motion jointly, so that the task-space objective is distributed
 between base and arm by the planner itself. As motivated in
 \cref{sec:need-wholebody}, decoupling sacrifices reach, optimality, and
-reactivity, which is precisely what whole-body planning recovers---at the
+reactivity, which is what whole-body planning recovers, at the
 cost of a higher-dimensional and more tightly coupled problem.
 
 \paragraph{Algorithmic principle.}
@@ -128,8 +128,8 @@ the execution through an MPC--MRT split: the \mpc{} process solves the
 optimal-control problem at its own rate and publishes a \emph{policy},
 while a lightweight Model Reference Tracking (MRT) client evaluates that
 policy at the control rate to produce the instantaneous command. This
-split is what makes it possible to run the optimiser and the hardware
-interface as separate processes---even on separate machines---a property
+split makes it possible to run the optimiser and the hardware
+interface as separate processes, even on separate machines, a property
 this thesis exploits in the distributed architecture of
 \cref{ch:integration}.
 
@@ -240,15 +240,15 @@ QP-IK is fast and reactive but myopic. Learning-based control is
 attractive in principle but conflicts with the near-term, hardware-first,
 and analysability goals of this work. Whole-body \mpc{} is the only family
 that simultaneously delivers coordinated base--arm motion, explicit
-constraint handling, and online reactivity; its main drawback---the
-computational burden of solving an optimal-control problem online---is
+constraint handling, and online reactivity; its main drawback, the
+computational burden of solving an optimal-control problem online, is
 addressable through the MPC--MRT split and a distributed deployment
 (\cref{ch:integration}) and is quantified experimentally in
 \cref{ch:hardware}.
 
 Among whole-body \mpc{} implementations, \ocs{} is selected for its mature
 open-source implementation, its explicit constraint support, its
-demonstrated use on wheeled and legged mobile manipulators, and---decisive
-for a real-time deployment on distributed hardware---its process-separable
+demonstrated use on wheeled and legged mobile manipulators, and, decisive
+for a real-time deployment on distributed hardware, its process-separable
 MPC--MRT architecture. The remainder of this thesis therefore integrates
 and validates \ocs{}-based whole-body \mpc{} on the \hero{} platform.

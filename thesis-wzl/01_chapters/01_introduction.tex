@@ -9,12 +9,13 @@
 
 Manufacturing is increasingly shaped by short product life cycles, high
 variant diversity, and volatile demand. Rigid, station-based assembly
-lines are optimised for a fixed product mix and a stable takt time; when
-the product or the required volume changes, the physical layout, the
-material flow, and the station balancing must be reconfigured, which is
-slow and capital-intensive~\cite{Huettemann2016LMAS}. This tension
-between the demand for flexibility and the rigidity of the classical
-assembly line motivates alternative production paradigms.
+lines are optimised for a fixed product mix and a stable takt time. When
+the product or the required volume changes, the layout, material flow,
+and station balancing must be reconfigured, which is slow and
+capital-intensive~\cite{Huettemann2016LMAS}. The flexibility that
+volatile demand requires and the rigidity of a fixed line pull in
+opposite directions, which has motivated alternative production
+paradigms.
 
 The \emph{Line-less Mobile Assembly System} (LMAS) is one such paradigm
 studied at the Laboratory for Machine Tools and Production Engineering
@@ -37,8 +38,7 @@ for the assembly operation itself. Combining the two allows a single
 resource to service many workstations and to reach parts of a large
 workpiece that no fixed-base arm could cover.
 
-This freedom, however, changes the motion-planning problem
-fundamentally. In a classical line, an industrial arm operates in a
+This freedom changes the motion-planning problem. In a classical line, an industrial arm operates in a
 carefully engineered, static cell: the part arrives at a known pose, the
 surroundings are fixed, and the arm executes largely pre-programmed
 trajectories. In an LMAS, several assumptions no longer hold:
@@ -59,11 +59,11 @@ trajectories. In an LMAS, several assumptions no longer hold:
         the arm \emph{jointly}.
 \end{itemize}
 
-In short, the LMAS paradigm demands motion planning that is
+Together, these conditions call for motion planning that is
 \emph{reactive}, that spans the \emph{combined} configuration space of
-base and arm, and that resolves the resulting redundancy in a principled
-way. This is precisely the class of problem addressed by whole-body
-motion planning, introduced next.
+base and arm, and that resolves the resulting redundancy deliberately
+rather than as a by-product. Whole-body motion planning, introduced
+next, is aimed at exactly this problem.
 
 % =====================================================================
 \section{The Need for Whole-Body Motion Planning: From Sequential to
@@ -104,15 +104,15 @@ treating the mobile base and the arm as a \emph{single} redundant
 kinematic (or dynamic) system and planning their motion in one unified
 optimisation. The \ee{} task is expressed directly in task space, and the
 planner is free to distribute the required motion between the base and the
-arm according to a chosen cost criterion. This unified view directly
-addresses the limitations above: it exploits the full combined workspace,
-it produces coordinated, simultaneous base--arm motion, and---when
-embedded in a feedback loop---it can react continuously to a changing
-target and environment.
+arm according to a chosen cost criterion. This directly
+addresses the limitations above: the full combined workspace becomes
+available, base and arm move simultaneously along one coordinated
+trajectory, and, once embedded in a feedback loop, the plan reacts
+continuously to a changing target and environment.
 
 Formulating whole-body planning as a receding-horizon optimal-control
 problem, i.e.\ as \emph{Model Predictive Control}
-(\mpc{})~\cite{Rawlings2017MPC}, is especially attractive for mobile
+(\mpc{})~\cite{Rawlings2017MPC}, is well suited to mobile
 manipulation. At each control step the planner solves a finite-horizon
 optimisation over the whole-body state and input, applies the first part
 of the resulting policy, and re-plans as new state estimates arrive.

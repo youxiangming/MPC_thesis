@@ -32,9 +32,12 @@
   "latex-workshop.latex.recipe.default": "tectonic",
   "latex-workshop.latex.build.forceRecipeUsage": true,
 
-  // Build automatically on every save, and show the PDF in a tab.
+  // Build automatically on every save, and show the PDF in a tab
+  // on the RIGHT (Typst-like split: source left, PDF right).
   "latex-workshop.latex.autoBuild.run": "onSave",
   "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.view.pdf.tab.editorGroup": "right",
+  "latex-workshop.synctex.afterBuild.enabled": true,
 
   // Tectonic writes main.pdf next to main.tex; look for it there.
   "latex-workshop.latex.outDir": "%DIR%",
