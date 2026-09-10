@@ -2,22 +2,508 @@
 \chapter{Simulation-Based Validation}
 \label{ch:simulation}
 
+The hardware loop of \cref{ch:integration} mixes three contributions to
+the recorded \ee{} error: the residual of the optimiser on its own
+kinematic model, the lag and clamping of the MRT bridge, and the
+odometry-plus-forward-kinematics estimate of where the robot is. A
+kinematic closed loop that replaces the bridge with an ideal rollout
+removes the last two, so a fault in the reference, the time axis or the
+cost function can be seen before it is blamed on the plant. That loop is
+the dummy MRT of \ocs{}. \Cref{sec:sim-methodology} states what it can
+show and defines the metrics used here and in \cref{ch:hardware}.
+\Cref{sec:sim-dummy} describes the closed \ee{} path that the dummy
+exercises and the checks that a session must pass before the same files
+are taken to the robot.
+
 % ---------------------------------------------------------------------
 \section{Validation Methodology and Evaluation Metrics}
 \label{sec:sim-methodology}
 
-% TODO: what the dummy-MRT simulation can and cannot show (no policy
-% lag, no actuator dynamics, no odom drift -> validates geometry, time
-% axis, data pipeline, visualization; NOT tracking accuracy). Metrics:
-% EE pose error (||e_pos||, e_ori), tangential/normal decomposition,
-% lag_eff = e_parallel / v_ref. Internal odom+FK metrology caveat.
+The dummy MRT is not a second controller. It is the production \mpc{}
+node and the production target publisher, closed through
+\texttt{MRT\_ROS\_Dummy\_Loop} instead of the hardware bridge
+(\cref{sec:hw-interfaces}). The dummy integrates the latest policy with
+the same kinematic rollout the solver uses, at the configured MRT rate of
+\qty{100}{\hz}, and feeds the resulting state back as the next
+observation. There is no policy-evaluation lag, no actuator dynamics, and
+no wheel-odometry drift. The \ee{} error that remains is the optimiser's
+residual against its own model: input costs and velocity limits prevent a
+perfect match to the interpolated reference, and a finite horizon cannot
+see the whole path.
+
+That residual is useful. If the dummy already leaves the commanded path,
+the later hardware error is not an execution problem. If the dummy
+tracks and the hardware does not, the gap is in the bridge, the
+actuators, or the state estimate, which is the comparison drawn in
+\cref{ch:hardware}. The dummy does not speak to real-time behaviour on
+the IPC: solve time, policy exhaustion and the observation-age guard
+never appear, because the observation is produced in the same process
+tree as the solver.
+
+A second simulated-hardware mode exists in the \hero{} stack: mock
+\texttt{ros2\_control} interfaces that echo commands into states while
+still running the MRT bridge~\cite{ros2control}. That mode keeps the
+timing and clamping of \cref{sec:hw-interfaces} and is used as a
+stepping stone onto the physical platform. It is not the subject of this
+chapter.
+
+\subsection{Internal metrology}
+\label{sec:sim-metrology}
+
+Desired and attained \ee{} poses are both computed inside the waypoint
+node from the same \mpc{} observation. The desired pose is the linear
+interpolation of the commanded knots at \texttt{observation.time}, which
+is the interpolation \ocs{} itself uses for the position part of the
+reference. The attained pose is Pinocchio forward kinematics of that
+observation, with \texttt{tool0} as the \ee{} frame
+(\cref{sec:hero-platform}). The error signal therefore carries no
+cross-topic time-alignment residual. The node publishes it at
+\qty{20}{\hz} on \texttt{/ee\_waypoint\_target/ee\_metrics}.
+
+On the dummy this is a consistent kinematic measurement. On hardware the
+same pipeline reconstructs the \ee{} from wheel odometry and joint
+encoders. Drift of the base pose then contaminates every later metric.
+The figures and tables of this chapter, and the internal traces of
+\cref{ch:hardware}, are therefore internal metrology. An ISO-conforming
+accuracy statement would require an external pose of the \ee{}, for
+example from an OptiTrack system, with the uncertainty budget of
+ISO~9283:1998 cl.~6.5~\cite{ISO9283}. That measurement is not part of
+the present experiments.
+
+\subsection{Time-aligned pose error}
+\label{sec:sim-pose-error}
+
+Let $\symbf{p}_\mathrm{d}(t)$ and $\symbf{p}_\mathrm{a}(t)$ be the
+desired and attained positions in the \texttt{world} frame, and
+$q_\mathrm{d}(t)$, $q_\mathrm{a}(t)$ the corresponding unit quaternions.
+The position and orientation errors used throughout are
+\begin{equation}
+  e_{\mathrm{p}}(t) = \lVert \symbf{p}_\mathrm{d}(t) -
+    \symbf{p}_\mathrm{a}(t) \rVert,
+  \qquad
+  e_{\mathrm{o}}(t) = 2\,\mathrm{atan2}\bigl(\lVert \symbf{v} \rVert,
+    \lvert w \rvert\bigr),
+  \label{eq:ee-errors}
+\end{equation}
+where $(w,\symbf{v})$ are the scalar and vector parts of
+$q_\mathrm{d}\,q_\mathrm{a}^{-1}$ and $e_{\mathrm{o}}$ is folded into
+$[0,\pi]$ so that the quaternion double cover does not appear as a
+$2\pi$ jump. On a measured edge of the path the position error is split
+into an along-track component $e_{\parallel} = \symbf{e}\cdot\symbf{\tau}$
+and a cross-track remainder $e_{\perp} = \lVert \symbf{e} -
+e_{\parallel}\,\symbf{\tau} \rVert$, with $\symbf{\tau}$ the unit
+tangent of that edge. The ratio
+\begin{equation}
+  t_{\mathrm{lag}} = e_{\parallel} / v_{\mathrm{ref}}
+  \label{eq:lag-eff}
+\end{equation}
+converts the along-track error into an equivalent time, with
+$v_{\mathrm{ref}}$ the commanded path speed. On hardware,
+$t_{\mathrm{lag}}$ is the quantity that can be compared with the
+policy-lag diagnostic of the MRT bridge
+(\cref{sec:hw-challenges}); the dummy has no such lag, so a large
+$t_{\mathrm{lag}}$ there would mean the optimiser is chronically behind
+its own reference.
+
+These samples are only admitted on the measured path. The waypoint node
+tags every metric with a segment identifier: \texttt{segment\_id} $\ge
+1$ is an edge of the closed box; $0$ is the approach from the current
+\ee{} to the entry point; $-10$, $-11$ and $-12$ are the lead-in,
+lead-out and optional park legs of ISO~9283 cl.~8.2~\cite{ISO9283}.
+Post-processing keeps $\texttt{segment\_id} \ge 1$. The transients of
+starting, stopping and parking do not enter $e_{\mathrm{p}}$,
+$t_{\mathrm{lag}}$ or the path metrics below.
+
+\subsection{Path metrics: Hausdorff distance and ISO path accuracy}
+\label{sec:sim-path-metrics}
+
+Time-aligned error assumes that the commanded and attained poses share a
+clock and a speed profile. That is true for the \ocs{} loop, where the
+reference is a time-parameterised \texttt{TargetTrajectories} message.
+It is not true of a decoupled Nav2 plus MoveIt baseline, which would
+reach the same corners with a different velocity profile and with
+pauses while the base repositions. A later comparison of the two
+pipelines therefore needs a metric that treats the command as a
+geometric path, not as a trajectory. The (symmetric) Hausdorff distance
+between the commanded point set $A$ and the attained point set $B$ is
+\begin{equation}
+  h(A,B) = \max_{a \in A} \min_{b \in B} \lVert a-b \rVert,
+  \qquad
+  H(A,B) = \max\bigl(h(A,B),\, h(B,A)\bigr).
+  \label{eq:hausdorff}
+\end{equation}
+The directed distance $h(B,A)$ is small whenever every attained sample
+lies near the command, including the degenerate case of a robot that
+stops halfway; $h(A,B)$ penalises shortcuts and unfinished laps. Both
+directions are required. The classical $\max$ is sensitive to a single
+spike, so results are reported as the symmetric mean
+\begin{equation}
+  \overline{H}(A,B)
+    = \frac{1}{2|A|}\sum_{a\in A}\min_{b\in B}\lVert a-b \rVert
+    + \frac{1}{2|B|}\sum_{b\in B}\min_{a\in A}\lVert a-b \rVert
+  \label{eq:mean-hausdorff}
+\end{equation}
+together with the 95th percentile of the nearest-neighbour distances and
+the raw $H(A,B)$. The command path is resampled at a spacing well below
+the expected error (one millimetre is enough for the box of
+\cref{sec:sim-dummy}) before the nearest-neighbour search, otherwise
+four or eight corners would inflate every distance.
+
+ISO~9283 defines path accuracy $\mathrm{AT}_{p}$ along a commanded path
+as the maximum, over the path, of the distance between that command and
+the barycentre of $n$ attained cycles~\cite{ISO9283}. With $n=1$,
+$\mathrm{AT}_{p}$ reduces to the maximum deviation of a single attained
+path from the command, which is close in spirit to $h(B,A)$ but still
+parameterised by the command, not by an unordered cloud. Pose accuracy
+$\mathrm{AP}_{p}$ (cl.~7.2.1) is the distance from each commanded corner
+to the barycentre of the attained poses at that corner; it is the
+fair common metric once a decoupled baseline exists, because that
+baseline has no continuous rectangular path to score with
+$\mathrm{AT}_{p}$. Cycle counts and the three mandatory speed levels of
+ISO Table~3 are not exercised in this chapter. One slow lap on the dummy
+is a pipeline check, not an ISO test.
+
+Task completion time, the wall-clock duration of the measured lap, is
+recorded alongside the geometric scores. Hausdorff distance ignores
+speed; a slow but accurate motion would otherwise look like a win.
+
+\Cref{tab:sim-metrics} summarises which quantity answers which question.
+Dummy sessions use the first two rows as live diagnostics in RViz and in
+the metric topic. Hausdorff and $\mathrm{AT}_{p}$ are computed
+offline from the same bag export that \cref{ch:hardware} uses.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Metrics used in the closed-path experiments]{%
+    Metrics used in the closed-path experiments. Dummy sessions produce
+    the first two rows as a planner residual. Hausdorff distance and
+    $\mathrm{AT}_{p}$ are evaluated offline on samples with
+    $\texttt{segment\_id} \ge 1$.}
+  \label{tab:sim-metrics}
+  \begin{tabularx}{\linewidth}{@{}lXl@{}}
+    \toprule
+    Quantity & Question & Notes \\
+    \midrule
+    $e_{\mathrm{p}}$, $e_{\mathrm{o}}$
+      & How far is the \ee{} from the command at this instant?
+      & \cref{eq:ee-errors}; same observation for both poses \\
+    $e_{\parallel}$, $e_{\perp}$, $t_{\mathrm{lag}}$
+      & Is the error along-track lag or cross-track deviation?
+      & measured edges only; \cref{eq:lag-eff} \\
+    $H$, $\overline{H}$, $P_{95}$
+      & Do the two paths have the same shape?
+      & time-free; both directions required \\
+    $\mathrm{AT}_{p}$
+      & ISO path accuracy of the whole-body loop
+      & cl.~8.2; whole-body pipeline only \\
+    $\mathrm{AP}_{p}$
+      & Did the \ee{} reach the corners?
+      & cl.~7.2.1; common with a pose-to-pose baseline \\
+    $T$
+      & How long did the measured lap take?
+      & wall clock; Hausdorff does not capture this \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 % ---------------------------------------------------------------------
 \section{Kinematic Closed-Loop Simulation (Dummy MRT)}
 \label{sec:sim-dummy}
 
-% TODO: four-point closed rectangle experiment (2.0 x 1.5 m, 0.1 m/s,
-% ~70 s/loop) driven by ee_waypoint_target_node; state machine
-% INIT->HOLD->RUNNING->FINISHED; OCS2 relative time axis; 1 Hz
-% idempotent re-publish; RViz visualization (desired vs actual axes,
-% ee_trace). Acceptance checklist results.
+The dummy launch starts, on one machine, the URDF exporter, the \mpc{}
+node, the dummy MRT, the robot-state publisher, RViz, and the waypoint
+target node. The interactive-marker target used in the \ocs{} demo is
+switched off, so the waypoint node is the only publisher on the \mpc{}
+target topic. The task file is \texttt{task\_experiment\_a.info}, the
+same file the hardware host launch loads, and the waypoint file is
+\texttt{experiment\_a\_waypoints.yaml}. What is being checked is the
+configuration that will run on the robot, not a separate simulation
+tune.
+
+\Cref{fig:sim-dummy-stack} shows the resulting graph. Compared with
+\cref{fig:architecture} there is no Zenoh boundary and no
+\texttt{ros2\_control} layer. The dummy loop calls
+\texttt{rolloutPolicy} on the kinematic model, advances
+\texttt{observation.time} by $\qty{10}{\milli\second}$, and publishes
+the new observation. The waypoint node consumes that observation both
+to build knot times and to evaluate \cref{eq:ee-errors}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=4pt, minimum height=9mm},
+      machine/.style={draw, dashed, rounded corners=2pt, inner sep=7pt},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      lbl/.style={font=\scriptsize, align=center},
+    ]
+    \node[box, minimum width=34mm] (wp) at (0,0)
+      {\texttt{ee\_waypoint\_target}\\reference + metrics};
+    \node[box, minimum width=30mm] (mpc) at (5.2,0)
+      {\mpc{} node\\(SLQ solver)};
+    \node[box, minimum width=36mm] (dummy) at (5.2,-3.2)
+      {dummy MRT\\kinematic rollout};
+    \node[box, minimum width=28mm] (rviz) at (0,-3.2)
+      {RViz\\commanded vs.\ attained};
+    \node[machine, fit=(wp)(mpc)(dummy)(rviz),
+          label={[lbl]above:single machine}] {};
+    \draw[flow] (wp) -- (mpc)
+      node[lbl, midway, above] {\texttt{\_mpc\_target}};
+    \draw[flow] ([xshift=-4mm]dummy.north) -- ([xshift=-4mm]mpc.south)
+      node[lbl, pos=0.45, left=1mm] {observation\\\qty{100}{\hz}};
+    \draw[flow] ([xshift=4mm]mpc.south) -- ([xshift=4mm]dummy.north)
+      node[lbl, pos=0.45, right=1mm] {policy};
+    \draw[flow] (dummy.west) -- (rviz.east);
+    \draw[flow] (wp.south) -- (rviz.north)
+      node[lbl, midway, left=1mm] {markers,\\trace, $e_{\mathrm{p}}$};
+  \end{tikzpicture}
+  \caption[Dummy-MRT closed loop for Experiment~A]{%
+    Dummy-MRT closed loop used to accept the Experiment~A configuration.
+    The hardware bridge of \cref{fig:architecture} is replaced by a
+    kinematic rollout of the latest policy; the waypoint node is
+    otherwise unchanged.}
+  \label{fig:sim-dummy-stack}
+\end{figure}
+
+\subsection{Commanded path}
+\label{sec:sim-path}
+
+The commanded path is an eight-corner rectangular parallelepiped whose
+edges are aligned with the world axes after the box is landed
+(\cref{fig:sim-box,tab:sim-waypoints}). ISO~9283 cl.~6.8.1 replaces a
+cube by a parallelepiped when the travel along one axis is much smaller
+than along the others~\cite{ISO9283}; here $z$ is an arm coordinate and
+$x$, $y$ can recruit the base. The implemented box is smaller than the
+workspace-filling $2.0\,\mathrm{m}\times 2.0\,\mathrm{m}\times
+0.40\,\mathrm{m}$ parallelepiped discussed as a design target. Its
+horizontal extents are \qty{0.60}{\meter} by \qty{0.80}{\meter} and its
+height is \qty{0.25}{\meter}, with the lower face at
+\qty{1.30}{\meter} and the upper face at \qty{1.55}{\meter}. The
+perimeter is \qty{4.50}{\meter}.
+
+Horizontal offsets are stored relative to the \ee{} pose at trigger
+time (\texttt{origin\_frame: ee}); the $z$ values are absolute world
+heights. Anchoring on the current \texttt{tool0} keeps the first corner
+next to the standby pose, so the approach gate is a short motion rather
+than a reach across the cell; the first offset is only
+\qty{0.41}{\meter}. The far corner lies \qty{1.35}{\meter} from
+that same \ee{}, which is enough to pull the base on the long edges
+without demanding a $2\,\mathrm{m}$ translation on every lap. The
+standby joint vector written in \texttt{task\_experiment\_a.info} (dummy
+only; the hardware bridge ignores it) is the MoveIt named state
+\texttt{bent}: shoulder pan, lift, elbow and wrist~1 at \ang{-90},
+wrist~2 at \ang{+90}, wrist~3 at zero.
+
+The visit order is a Hamiltonian cycle on the eight corners in which
+every consecutive pair differs in a single coordinate:
+\begin{equation*}
+  \mathrm{P1}
+    \xrightarrow{x}\mathrm{P2}
+    \xrightarrow{y}\mathrm{P3}
+    \xrightarrow{x}\mathrm{P4}
+    \xrightarrow{z}\mathrm{P5}
+    \xrightarrow{x}\mathrm{P6}
+    \xrightarrow{y}\mathrm{P7}
+    \xrightarrow{x}\mathrm{P8}
+    \xrightarrow{z}\mathrm{P1}.
+\end{equation*}
+Six edges are horizontal and two are vertical. The vertical pair is a
+pure arm motion in $z$; the base cannot contribute to it. Closing the
+loop on a downward $z$ edge has a consequence for the ISO lead-out,
+taken up below.
+
+All eight knots share one orientation,
+$\mathrm{RPY}=(\pi,\,0,\,-\pi/2)$, which is the \texttt{tool0} pose of
+\texttt{bent} given the \ang{-90} mount of the arm
+(\cref{sec:hero-platform}). A constant quaternion is required because
+\texttt{TargetTrajectories::getDesiredState} interpolates quaternion
+coefficients component-wise, not by spherical interpolation. A time-varying
+reference orientation would inject interpolation error into
+$e_{\mathrm{o}}$ that is not the controller's.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      >=Latex,
+      boxedge/.style={thick},
+      zedge/.style={thick, dashed},
+      lead/.style={thick, RWTHOrange100},
+      pnt/.style={circle, fill=RWTHBlau100, inner sep=1.2pt},
+      lbl/.style={font=\scriptsize},
+    ]
+    % scale: 1 m = 4.2 cm; x right = robot forward, y up = robot left
+    \def\s{4.2}
+    % bottom face z = 1.30
+    \coordinate (P1) at ({0.40*\s}, {-0.10*\s});
+    \coordinate (P2) at ({1.00*\s}, {-0.10*\s});
+    \coordinate (P3) at ({1.00*\s}, {-0.90*\s});
+    \coordinate (P4) at ({0.40*\s}, {-0.90*\s});
+    % top face, offset to suggest height
+    \coordinate (off) at (0.55, 0.70);
+    \coordinate (P8) at ($(P1)+(off)$);
+    \coordinate (P7) at ($(P2)+(off)$);
+    \coordinate (P6) at ($(P3)+(off)$);
+    \coordinate (P5) at ($(P4)+(off)$);
+    \coordinate (Lin) at ({0.25*\s}, {-0.10*\s});
+    % top rectangle (dashed) then bottom (solid), then verticals
+    \draw[boxedge, dashed] (P8) -- (P7) -- (P6) -- (P5) -- cycle;
+    \draw[boxedge] (P1) -- (P2) -- (P3) -- (P4) -- cycle;
+    \draw[zedge] (P1) -- (P8);
+    \draw[zedge] (P2) -- (P7);
+    \draw[zedge] (P3) -- (P6);
+    \draw[zedge] (P4) -- (P5);
+    % measured Hamiltonian: P1-P2-P3-P4-P5-P6-P7-P8-P1
+    \draw[->, very thick, RWTHBlau100] (P1) -- (P2);
+    \draw[->, very thick, RWTHBlau100] (P2) -- (P3);
+    \draw[->, very thick, RWTHBlau100] (P3) -- (P4);
+    \draw[->, very thick, RWTHBlau100] (P4) -- (P5);
+    \draw[->, very thick, RWTHBlau100] (P5) -- (P6);
+    \draw[->, very thick, RWTHBlau100] (P6) -- (P7);
+    \draw[->, very thick, RWTHBlau100] (P7) -- (P8);
+    \draw[->, very thick, RWTHBlau100] (P8) -- (P1);
+    \draw[lead, ->] (Lin) -- (P1);
+    \foreach \p/\n/\a in {
+      P1/P1/above, P2/P2/above, P3/P3/below,
+      P4/P4/below, P5/P5/left, P6/P6/right,
+      P7/P7/right, P8/P8/left} {
+      \node[pnt] at (\p) {};
+      \node[lbl, \a] at (\p) {\n};
+    }
+    \node[pnt, fill=RWTHOrange100] at (Lin) {};
+    \node[lbl, above left] at (Lin) {lead-in};
+    \node[lbl, anchor=west] at (5.0, -3.6)
+      {solid: $z=\qty{1.30}{\meter}$; dashed: $z=\qty{1.55}{\meter}$};
+    \node[lbl, anchor=west] at (5.0, -4.05)
+      {$x$ forward (right), $y$ left (up)};
+  \end{tikzpicture}
+  \caption[Eight-corner commanded path for Experiment~A]{%
+    Commanded parallelepiped in the \ee{}-anchored frame of
+    \texttt{experiment\_a\_waypoints.yaml}. Blue arrows are the
+    measured Hamiltonian cycle (segment identifiers $1$--$8$). The
+    orange stub is the ISO~8.2 lead-in; the lead-out continues
+    \qty{0.15}{\meter} down from P1 along the closing $z$ edge and is
+    omitted here.}
+  \label{fig:sim-box}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \caption[Waypoint offsets of the Experiment~A box]{%
+    Waypoint offsets of the Experiment~A box, copied from
+    \texttt{experiment\_a\_waypoints.yaml}. $\Delta x$, $\Delta y$ are
+    applied in the base yaw at trigger time about the current \ee{};
+    $z$ is an absolute world height.}
+  \label{tab:sim-waypoints}
+  \begin{tabularx}{\linewidth}{@{}lXXXX@{}}
+    \toprule
+    Corner & $\Delta x$ / \si{\meter} & $\Delta y$ / \si{\meter}
+      & $z$ / \si{\meter} & To next \\
+    \midrule
+    P1 & 0.40 & $-0.10$ & 1.30 & $+x$, \qty{0.60}{\meter} \\
+    P2 & 1.00 & $-0.10$ & 1.30 & $-y$, \qty{0.80}{\meter} \\
+    P3 & 1.00 & $-0.90$ & 1.30 & $-x$, \qty{0.60}{\meter} \\
+    P4 & 0.40 & $-0.90$ & 1.30 & $+z$, \qty{0.25}{\meter} \\
+    P5 & 0.40 & $-0.90$ & 1.55 & $+x$, \qty{0.60}{\meter} \\
+    P6 & 1.00 & $-0.90$ & 1.55 & $+y$, \qty{0.80}{\meter} \\
+    P7 & 1.00 & $-0.10$ & 1.55 & $-x$, \qty{0.60}{\meter} \\
+    P8 & 0.40 & $-0.10$ & 1.55 & $-z$, \qty{0.25}{\meter} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Time axis, state machine, and ISO legs}
+\label{sec:sim-node}
+
+Knot times are built on the \ocs{} relative axis
+\texttt{observation.time}, never on the wall clock. A knot stamped in
+wall time falls outside the receding horizon and the robot either freezes
+or jumps to the last sample; that failure is cheap to see on the dummy
+and expensive on hardware. At a trigger time $t_{0}$ the node walks the
+landed corners, adding $\lVert \Delta\symbf{p}\rVert / v_{\mathrm{ref}}$
+on every edge. The configured path speed is
+$v_{\mathrm{ref}} = \qty{0.05}{\meter\per\second}$, half of the
+\qty{0.10}{\meter\per\second} base limit in
+\texttt{task\_experiment\_a.info}, so a dummy that cannot keep up is a
+cost or constraint problem rather than a saturated plant. With
+\texttt{corner\_dwell\_sec} $= \qty{2.0}{\second}$ the reference pauses
+at each corner; the \qty{4.50}{\meter} perimeter then takes
+\qty{90}{\second} of motion, and the seven dwells inside the measured
+lap add \qty{14}{\second}, before lead-in and lead-out. A dwell of zero would
+be the ISO path-accuracy mode (constant speed through corners). The
+value used here is a pose-accuracy setting: the \ee{} is given time to
+settle so that a later $\mathrm{AP}_{p}$ is not dominated by a corner
+cut.
+
+After \texttt{/start} the node does not immediately run the cycle. It
+lands the box once, holds the reference at the lead-in point, and waits
+until the measured \ee{} stays within
+\qty{0.02}{\meter} of that point for \qty{0.3}{\second}
+(\texttt{Approaching}). Only then does the running trajectory begin, so
+the first measured edge does not contain the motion from standby. The
+phase sequence is $\mathrm{Init}\to\mathrm{Hold}\to
+\mathrm{Approaching}\to\mathrm{Running}\to\mathrm{Finished}$.
+\texttt{auto\_start} is false: the box is drawn in RViz first, and a
+service call starts the motion after a visual check.
+
+ISO~9283 cl.~8.2 requires the programmed start and end to lie outside
+the test path. A lead-in of \qty{0.15}{\meter} is placed on the backward
+extension of P1--P2, and a lead-out of \qty{0.15}{\meter} on the tangent
+of the closing edge. With the present Hamiltonian order that closing
+edge is the downward $z$ leg, so the lead-out ends at
+$z=\qty{1.15}{\meter}$. The dummy RViz configuration draws those legs
+in orange for exactly this reason: a lead-out that would enter the
+chassis is visible before anyone calls start. Returning to the standby
+pose after the lead-out is switched off for this path
+(\texttt{return\_to\_home: false}).
+
+The trajectory is re-published at \qty{1}{\hz}. Re-sending the same
+knots on the \ocs{} time axis is idempotent, but it restores the
+reference if a reset handshake of the MRT bridge has overwritten it
+with a two-sample hold (\cref{sec:hw-interfaces}). The dummy rarely
+handshakes again in mid-run; the timer is still part of the node that
+hardware will use.
+
+Relative to \texttt{task\_hardware.info} (\cref{tab:mpc-config}), the
+experiment file lowers the pre-scale diagonal of $R_{\mathrm{base}}$
+from $8.5$ to $5.5$, replaces the uniform arm diagonal of $4.0$ by
+per-joint values between $2.5$ and $4.0$, and raises the \ee{} position
+weight from $10$ to $\mu_{\mathrm{p}}=16$ while lowering the orientation
+weight from $5$ to $\mu_{\mathrm{o}}=3$. A cheaper base and a tighter
+position term are what push the solver to reach the far corners by
+driving the platform instead of stretching the arm towards its reach
+limit. The file also lengthens the horizon from \qty{1.2}{\second} to
+$T=\qty{1.3}{\second}$ and the solution time window from
+\qty{1.0}{\second} to $T_{\mathrm{sol}}=\qty{1.2}{\second}$; solve and
+evaluation rates stay at \qty{10}{\hz} and \qty{100}{\hz}. The dummy
+therefore validates that operating point, not the everyday hardware
+tune.
+
+\subsection{Procedure and acceptance}
+\label{sec:sim-acceptance}
+
+A dummy session is started with
+\texttt{experiment\_a\_dummy.launch.py}. After the first observation the
+box appears in RViz, including the orange lead legs. The operator
+confirms that every corner is in the cell and that the lead-out at
+$z=\qty{1.15}{\meter}$ clears the chassis, then calls
+\texttt{/ee\_waypoint\_target/start}. The dummy plant must reach the
+entry point, traverse all eight measured edges, and finish on the
+lead-out hold without the reference jumping to the last knot. The
+metric topic must show \texttt{segment\_id} passing through $1$--$8$
+and returning to a negative identifier. Those checks accept the
+geometry, the \ocs{} time axis, the data pipeline and the visualisation.
+They do not produce a tracking-accuracy number for the robot.
+
+The same YAML and task file are the input of the mock-hardware and
+physical runs in \cref{ch:hardware}. A planar four-corner variant
+exists as a reduced path at constant $z$ and shares this node; it is
+not used in the dummy checks reported here.
+
+What the dummy cannot close is the list in
+\cref{sec:sim-methodology}: policy lag, actuator dynamics, odometry
+drift, and any ISO claim that needs an external \ee{} pose, $n\ge 3$
+cycles, or a second pipeline. Those belong to the hardware chapter,
+using the metrics of \cref{tab:sim-metrics} on the measured segments of
+the path in \cref{fig:sim-box}.

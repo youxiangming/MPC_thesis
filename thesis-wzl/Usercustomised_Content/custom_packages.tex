@@ -12,5 +12,21 @@
 % --- Clever cross-references (load AFTER hyperref, which the class does)
 \usepackage[capitalise,noabbrev]{cleveref}
 
+% --- TikZ libraries for the architecture diagrams --------------------
+% (tikz itself arrives with todonotes, loaded by the class)
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, calc}
+\usepackage{pgfplots}
+\pgfplotsset{
+  compat=1.18,
+  every axis/.append style={
+    font=\footnotesize,
+    grid=major,
+    grid style={dotted, gray!40},
+    tick label style={font=\scriptsize},
+    legend style={font=\scriptsize, draw=none, fill=none, row sep=1pt},
+  },
+}
+
 % --- Draft watermark (uncomment while drafting) ----------------------
 % \usepackage{draftwatermark}

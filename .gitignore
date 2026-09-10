@@ -4,7 +4,12 @@ materials/
 # Locally downloaded build tools (tectonic, biber binaries)
 .tools/
 
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/thinking-source-state.md
 
 # LaTeX build artifacts (belt-and-suspenders; subfolders have their own too)
 *.aux

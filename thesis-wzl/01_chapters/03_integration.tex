@@ -2,43 +2,569 @@
 \chapter{Integration of \ocs{} into the \hero{} Mobile Manipulator}
 \label{ch:integration}
 
+This chapter documents the system that was built to run \ocs{} whole-body
+\mpc{} on the physical \hero{} platform. \Cref{sec:hero-platform}
+describes the platform and the properties that constrain the controller.
+\Cref{sec:distributed-arch} presents the two-machine deployment that
+makes the optimisation affordable at run time, and
+\cref{sec:wholebody-model} the whole-body model together with the
+operating point it was tuned to. \Cref{sec:hw-interfaces} describes the
+layer that turns an \ocs{} policy into wheel and joint commands. Unless
+stated otherwise, parameter values are those of the on-robot
+configuration file \texttt{task\_hardware.info}; measured timing and
+tracking results are reported in \cref{ch:hardware}.
+
 % ---------------------------------------------------------------------
 \section{\hero{} Platform: Differential-Drive Base and UR10e Manipulator}
 \label{sec:hero-platform}
 
-% TODO: describe HERo -- HMI differential-drive mobile base + UR10e arm,
-% arm mount offset (footprint -> ur_mount at (-0.355, -0.050, 0.830)),
-% shoulder height ~1.01 m, sensors, on-board IPC (.105), network
-% 192.168.12.0/24. Cite UR10e, HMIbase.
+The \hero{} platform combines a HENKEL~+~ROTH \emph{freeMoVe} transport
+base (product designation \emph{mobile robot mr~3.0}) with a Universal
+Robots UR10e six-axis
+arm~\cite{HenkelRoth2019freeMoVe,HenkelRoth2020mr3ROS,UR10e}. The
+chassis measures \qty{0.95}{\meter} $\times$ \qty{0.65}{\meter} $\times$
+\qty{0.815}{\meter} and carries a modelled mass of \qty{400}{\kilo\gram}
+in the kinematic description used throughout this work. Two
+independently actuated wheels of radius \qty{0.08}{\meter} at a track
+width of \qty{0.548}{\meter} provide the drive; four passive casters
+carry the remaining load. The wheel drives are commanded over a CANopen
+bus. The arm is mounted \qty{0.830}{\meter} above the ground on a plate
+offset by \qty{-0.355}{\meter} in $x$ and \qty{-0.050}{\meter} in $y$
+from the base origin and rotated by \ang{-90} about the vertical axis,
+so that the shoulder sits roughly at the height of a workpiece carrier.
+
+Two properties of this combination shape the control problem. The first
+is the drive geometry: the base pose has three planar degrees of freedom
+but only two independent velocity inputs, and the base cannot translate
+sideways. A whole-body planner must respect this non-holonomic
+restriction, otherwise it produces \ee{} paths that the base cannot
+follow. The second is inertia. Moving a \qty{400}{\kilo\gram} platform
+is slow, and the safety concept of the platform limits its speed
+independently of what a controller may request, which is why the base
+velocities in \cref{sec:wholebody-model} are capped an order of
+magnitude below the arm's capability.
+
+The kinematic tree is rooted at the frame \texttt{footprint}, which lies
+on the ground plane midway between the drive wheels, with $x$ forward,
+$y$ to the left and $z$ upwards. The controlled \ee{} frame is
+\texttt{tool0}, the flange frame that coincides with the tool
+orientation shown on the teach pendant; the arm's own
+\texttt{base\_link} is not used, because its axes are rotated with
+respect to the pendant convention and would invite sign errors when
+comparing commanded and measured poses.
+
+Beyond the drives, the platform carries five SICK safety laser scanners,
+two safety controllers, wheel brakes, and an operator panel. None of
+these enters the \mpc{} loop. The controller described here consumes
+exactly two measurements, wheel odometry and arm joint positions, and
+relies on the platform's own safety layer for protective stops. Obstacle
+avoidance with respect to the environment is consequently not part of
+the optimisation; only self-collision between the arm and the platform
+is (\cref{sec:wholebody-model}).
+
+Computation is split over two machines on the robot's own
+\texttt{192.168.12.0/24} subnet. An industrial PC (IPC) inside the
+platform hosts the ROS~2 Jazzy~\cite{ROS2} control stack in a container
+and reaches the arm controller over the same subnet; an external
+workstation joins the subnet either by cable or through the platform's
+wireless access point. Which software runs where is the subject of the
+next section.
 
 % ---------------------------------------------------------------------
 \section{Distributed System Architecture for Real-Time \mpc{}}
 \label{sec:distributed-arch}
 
-% TODO: host (.222) runs MPC + RViz + target; IPC (.105) runs
-% hardware_control + MRT bridge. Only 3 streams cross the Zenoh
-% boundary at the MRT_ROS_Interface layer: _mpc_observation (IPC->host,
-% ~100 Hz), _mpc_policy (host->IPC), _mpc_reset service. Cite ROS2,
-% zenoh. Include architecture figure.
+Solving the optimal-control problem is by far the most expensive part of
+the loop, and the on-board IPC is a small machine. Running the solver
+there would have forced a shorter horizon or a coarser model. The
+MPC--MRT split of \ocs{} (\cref{sec:sota-ocs2}) offers a way out: the
+optimiser and the client that evaluates its policy are separate
+processes that exchange messages, so they may live on different
+machines. Two deployments were implemented on this basis, and both are
+kept in the repository because they fail in different ways.
+
+In the \emph{split} deployment, which is the one used for the
+experiments, the workstation runs the \mpc{} node, the target-generating
+node and the visualisation, while the IPC runs the low-level control
+chain and the MRT bridge. The fast path---measure, evaluate the policy,
+actuate---is then entirely local to the IPC, and only three \ocs{}
+streams cross the machine boundary. In the \emph{integrated} deployment,
+\mpc{} and MRT both run on the workstation and the IPC is reduced to a
+controller host, which moves the raw control traffic onto the network
+instead. \Cref{tab:topology-streams} contrasts the two.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Traffic crossing the machine boundary per deployment]{%
+    Traffic crossing the workstation--IPC boundary in the two
+    deployments. Only the split deployment keeps the actuation path
+    machine-local.}
+  \label{tab:topology-streams}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+      & Split (used here) & Integrated \\
+    \midrule
+    Workstation
+      & \mpc{} node, target node, RViz
+      & \mpc{} node, MRT bridge, target node, RViz \\
+    IPC
+      & control chain, MRT bridge
+      & control chain \\
+    Crossing the network
+      & \texttt{\_mpc\_observation} (IPC\,$\rightarrow$\,workstation,
+        \qty{100}{\hz}), \texttt{\_mpc\_policy}
+        (workstation\,$\rightarrow$\,IPC), \texttt{\_mpc\_reset} service
+        at start-up
+      & odometry, \texttt{/joint\_states}, \texttt{/tf},
+        \texttt{/robot\_description} upstream; base twist and arm
+        trajectory downstream \\
+    Effect of a link outage
+      & the bridge keeps evaluating the last policy locally until its
+        validity window expires, then holds
+      & the base stops at the \qty{0.5}{\second} command timeout of the
+        drive controller \\
+    Clock synchronisation
+      & not required
+      & mandatory \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The clock requirement follows from where wall-clock times are compared.
+\ocs{} timestamps observations and policies on a relative time axis
+whose origin the bridge fixes at the first accepted measurement, so the
+\mpc{}--MRT exchange itself is insensitive to an offset between the two
+machine clocks. The bridge does compare wall-clock times in one place,
+its staleness check on incoming measurements, but in the split
+deployment the measurements and the check share the IPC clock. In the
+integrated deployment they do not: the workstation compares its own
+\texttt{now()} against IPC-stamped messages, and an offset larger than
+the \qty{0.2}{\second} staleness threshold makes every measurement look
+stale, which stops the robot. Chrony or an equivalent time service is
+therefore mandatory there and pointless in the split deployment.
+
+Both deployments were run with the Zenoh middleware
+implementation~\cite{zenoh} rather than the default DDS. The switch was
+made during bring-up, after DDS discovery over the platform's wireless
+link had repeatedly failed to establish the \ocs{} streams; no
+systematic comparison of the two middlewares was recorded, so this is a
+deployment decision and not a measured result.
+Zenoh requires a router process on each machine, with one router
+configured to connect to the other; the workstation router is pointed at
+the IPC router. \Cref{fig:architecture} shows the resulting node and
+topic layout for the split deployment.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=4pt, minimum height=9mm},
+      machine/.style={draw, dashed, rounded corners=2pt, inner sep=7pt},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      lbl/.style={font=\scriptsize, align=center},
+    ]
+    % --- workstation ------------------------------------------------
+    \node[box, minimum width=30mm] (mpc)    at (0,0)
+      {\mpc{} node\\(SLQ solver)};
+    \node[box, minimum width=32mm] (target) at (-4.9,0)
+      {target node\\(\ee{} reference)};
+    \node[machine, fit=(mpc)(target),
+          label={[lbl]above:Workstation}] (host) {};
+
+    % --- IPC --------------------------------------------------------
+    \node[box, minimum width=34mm] (mrt)  at (0,-3.8)
+      {MRT bridge\\(policy evaluation)};
+    \node[box, minimum width=40mm] (ctrl) at (0,-6.1)
+      {\texttt{ros2\_control}\\twist\_mux, diff.\ drive, JTC};
+    \node[box, minimum width=30mm] (rsp)  at (-4.9,-6.1)
+      {\texttt{robot\_state\_}\\\texttt{publisher}};
+    \node[inner sep=0pt, minimum size=0pt] (pad) at (2.9,-4.95) {};
+    \node[machine, fit=(mrt)(ctrl)(rsp)(pad),
+          label={[lbl]below:On-board IPC}] (ipc) {};
+
+    % --- robot ------------------------------------------------------
+    \node[box, minimum width=30mm] (robot) at (0,-8.3)
+      {wheels, UR10e};
+
+    % --- cross-machine streams --------------------------------------
+    \draw[flow] ([xshift=-7mm]mrt.north) -- ([xshift=-7mm]mpc.south)
+      node[lbl, pos=0.35, left=1mm] {observation\\\qty{100}{\hz}};
+    \draw[flow] ([xshift=7mm]mpc.south) -- ([xshift=7mm]mrt.north)
+      node[lbl, pos=0.32, right=1mm] {policy};
+
+    % --- local links ------------------------------------------------
+    \draw[flow] (target) -- (mpc)
+      node[lbl, midway, above] {reference};
+    \draw[flow] ([xshift=-7mm]mrt.south) -- ([xshift=-7mm]ctrl.north)
+      node[lbl, midway, left=1mm] {base twist,\\arm trajectory};
+    \draw[flow] ([xshift=7mm]ctrl.north) -- ([xshift=7mm]mrt.south)
+      node[lbl, midway, right=1mm] {odometry,\\joint states};
+    \draw[flow, {Latex[length=2mm]}-{Latex[length=2mm]}]
+      (ctrl.south) -- (robot.north);
+    \draw[flow, dashed] (ctrl.west) -- (rsp.east)
+      node[lbl, midway, above=0.5mm] {joint states};
+
+    % --- network boundary -------------------------------------------
+    \draw[dotted, thick] (-7.3,-1.9) -- (3.0,-1.9);
+    \node[lbl, anchor=west] at (-7.3,-2.15) {Zenoh network boundary};
+  \end{tikzpicture}
+  \caption[Split deployment of \ocs{} on \hero{}]{%
+    Split deployment of \ocs{} on \hero{}. The workstation solves the
+    optimal-control problem; the IPC evaluates the resulting policy and
+    actuates the robot, so the loop that runs at \qty{100}{\hz} is
+    machine-local. The reset service and the visualisation on the
+    workstation are omitted.}
+  \label{fig:architecture}
+\end{figure}
+
+One consistency requirement is easy to violate and worth stating
+explicitly. The \mpc{} node and the MRT bridge each build their own
+Pinocchio model from a URDF file that is exported from the platform
+description at launch time. The two exports must use the same
+end-effector variant and the same kinematic calibration file, otherwise
+the solver optimises for one robot and the bridge evaluates the policy
+on another. The visualisation, in contrast, takes its model from the
+\texttt{robot\_state\_publisher} on the IPC, which is the single
+authoritative source of \texttt{/tf} and \texttt{/robot\_description};
+the workstation launch deliberately starts no second publisher. Because
+\ocs{} hardcodes \texttt{world} as its inertial frame while the robot
+tree is rooted at \texttt{odom}, an identity transform between the two
+is published on the workstation. The base state fed to the solver is
+wheel odometry, so \texttt{world} and \texttt{odom} coincide
+numerically; the price is that the controller inherits the drift of the
+odometry, and no external localisation corrects it.
+
+Start-up follows a fixed order: the Zenoh routers first, then the
+\mpc{} node on the workstation, then the IPC. The \mpc{} node advertises
+the reset service that the bridge needs for its initial handshake, so
+starting it first avoids a wait. The reverse order also converges,
+because the bridge waits for the service rather than aborting
+(\cref{sec:hw-interfaces}). On the first start after a model change,
+\ocs{} generates and compiles the derivative code before the solver
+runs, which adds a delay of roughly one minute; the compiled libraries
+are then cached on disk.
 
 % ---------------------------------------------------------------------
-\section{Whole-Body Model and Parameterization}
+\section{Whole-Body Model and Parameterisation}
 \label{sec:wholebody-model}
 
-% TODO: WheelBasedMobileManipulator model.
-%   State  x in R^9: (px, py, psi, q_arm[0..5])
-%   Input  u in R^8: (v, omega, dq_arm[0..5])
-% Costs (EE tracking, input R.base/R.arm), constraints (joint/velocity
-% limits +-0.3, self-collision minimumDistance=0.11), horizon 1.3 s,
-% solutionTimeWindow 1.0 s, timeStep 2e-3, nThreads 8. Reference
-% task_hardware.info as the authoritative config.
+\ocs{} ships a mobile-manipulator model family, of which the
+\emph{wheel-based} variant matches \hero{}: a non-holonomic planar base
+carrying a serial arm. The Pinocchio model is built from the platform
+URDF with the two wheel joints declared fixed, since the wheels are not
+part of the kinematic chain from base to \ee{} and their rotation is
+irrelevant to the task. The base frame is \texttt{footprint} and the
+\ee{} frame is \texttt{tool0}, as introduced in
+\cref{sec:hero-platform}. The resulting state and input are
+
+\begin{equation}
+  \svec = \left( p_x,\; p_y,\; \psi,\; \qarm \right) \in \mathbb{R}^{9},
+  \qquad
+  \uvec = \left( v,\; \omega,\; \qarmdot \right) \in \mathbb{R}^{8},
+  \label{eq:state-input}
+\end{equation}
+
+with $(p_x, p_y, \psi)$ the base pose in the inertial frame,
+$\qarm \in \mathbb{R}^{6}$ the arm joint positions, $v$ and $\omega$ the
+base forward and yaw rate, and $\qarmdot$ the arm joint velocities.
+The system equation is the differential-drive kinematics augmented by
+the arm joints,
+
+\begin{equation}
+  \dot{\svec} \;=\; f(\svec, \uvec) \;=\;
+  \begin{pmatrix}
+    v \cos\psi \\ v \sin\psi \\ \omega \\ \qarmdot
+  \end{pmatrix} ,
+  \label{eq:flowmap}
+\end{equation}
+
+which encodes the non-holonomic restriction of
+\cref{sec:hero-platform}: no input produces motion along the base
+$y$-axis. The model is kinematic, not dynamic. Both actuator groups are
+commanded in velocity---the drive controller takes a twist and the arm
+controller takes joint positions at a fixed rate---and no validated
+inertial parameters exist for the loaded platform, so a dynamic model
+would add nine states and an unverified mass matrix without changing
+what can be commanded. The cost of this choice is that inertial effects
+appear to the solver only through the velocity limits.
+
+The objective combines an input cost with soft constraints. Over a
+horizon $T$ starting at $t_0$,
+
+\begin{equation}
+  \begin{aligned}
+    J = \int_{t_0}^{t_0+T} \Big[
+        &\tfrac{1}{2}\, \uvec^{\mathsf{T}} R\, \uvec
+      + \tfrac{1}{2}\, \mu_\mathrm{p} \lVert e_\mathrm{p}(\svec) \rVert^2
+      + \tfrac{1}{2}\, \mu_\mathrm{o} \lVert e_\mathrm{o}(\svec) \rVert^2 \\
+      &+ B_\mathrm{lim}(\svec, \uvec) + B_\mathrm{col}(\svec)
+      \Big]\, \mathrm{d}t
+      \;+\; \Phi\big(\svec(t_0+T)\big) ,
+  \end{aligned}
+  \label{eq:cost}
+\end{equation}
+
+where $e_\mathrm{p}$ is the \ee{} position error and $e_\mathrm{o}$ the
+orientation error, both taken with respect to the reference pose
+interpolated from the target trajectory at the current time, and $\Phi$
+repeats the two \ee{} terms at the end of the horizon. The reference is
+supplied online through the \ocs{} reference manager, either by an
+interactive marker in RViz or by the waypoint node used in
+\cref{ch:simulation,ch:hardware}. \ocs{} interpolates that reference
+linearly and component-wise between successive knots, the quaternion
+included, which is why the waypoint node commands one constant
+orientation for the whole path (\cref{sec:sim-path}).
+
+The input weight is diagonal and separates base from arm,
+$R = \operatorname{diag}(R_\mathrm{base}, R_\mathrm{arm})$ with
+$R_\mathrm{base} = 0.085 \cdot I_2$ and
+$R_\mathrm{arm} = 0.04 \cdot I_6$. The ratio is the tuning knob that
+distributes a commanded \ee{} motion between base and arm: base motion
+is charged roughly twice as much as arm motion, which keeps the heavy
+platform still for targets the arm can reach on its own and lets it
+contribute once the arm approaches its reach limit. \Cref{ch:hardware}
+returns to this ratio, because it also determines whether the base
+starts moving early enough for paths that leave the arm's workspace.
+
+Limits and self-collision enter as relaxed barrier penalties, the
+standard \ocs{} treatment of an inequality $h(\svec,\uvec) \ge 0$:
+
+\begin{equation}
+  B(h) =
+  \begin{cases}
+    -\mu \ln h, & h > \delta, \\[2pt]
+    -\mu \ln \delta
+      + \dfrac{\mu}{2}\left[ \left(\dfrac{h - 2\delta}{\delta}\right)^{2} - 1 \right],
+      & h \le \delta .
+  \end{cases}
+  \label{eq:barrier}
+\end{equation}
+
+The barrier is logarithmic while the constraint is comfortably
+satisfied and switches to a quadratic extension below the relaxation
+width $\delta$, which keeps the cost and its derivatives finite when a
+constraint is violated---necessary here, because measured states from
+the real robot do occasionally violate a limit. Three groups of
+constraints use this penalty: arm joint position limits, velocity limits
+on all eight inputs, and a minimum distance between selected pairs of
+links. The position limits are overridden in the task file instead of
+being read from the URDF, which bounds every UR10e joint at
+\ang{\pm 360}. Those bounds are far wider than the joint limits
+configured in the arm's own safety panel, so a plan that satisfies the
+URDF can still drive the arm into a safety limit and provoke a
+protective stop that \ocs{} never sees. The values used here are the
+panel limits of this installation.
+The velocity bounds are \qty{\pm 0.1}{\meter\per\second} and
+\qty{\pm 0.1}{\radian\per\second} for the base and
+\qty{\pm 0.3}{\radian\per\second} per arm joint, matching the caps that
+the bridge enforces downstream (\cref{sec:hw-interfaces}).
+
+Self-collision deserves a remark, because its evaluation cost scales
+with the number of geometry pairs and it was therefore the first term
+addressed when solve time had to be reduced. The platform carries tube
+holders and instrument rings on the arm links, and a naive enumeration
+of the pairs that can touch yields 32 of them; each pair costs a
+distance query and a derivative at every collocation point. The set was
+reduced to twelve pairs by dropping attachments that protrude less than
+about \qty{6}{\centi\meter} beyond their parent link and raising the
+minimum distance to \qty{0.11}{\meter}, so that the parent-link pair
+plus the margin covers the dropped geometry. The two largest forearm
+stacks are kept explicitly. The discarded pairs are retained in a
+separate file and can be visualised for inspection.
+
+The solver settings and the horizon are collected in
+\cref{tab:mpc-config}. Three of them interact and are worth spelling
+out. Only one SLQ iteration per solve is allowed: with a
+\qty{1.2}{\second} horizon and a re-solve every \qty{100}{\milli\second}
+the previous solution is a good initial guess, so a second iteration
+buys little and doubles the solve time. The policy that the solver
+publishes is declared valid for a \emph{solution time window} of
+\qty{1.0}{\second}, shorter than the horizon; the bridge holds the robot
+once a policy is exhausted rather than extrapolating it
+(\cref{sec:hw-interfaces}). Real-time operation therefore requires
+
+\begin{equation}
+  2 \cdot \overline{t}_\mathrm{solve} \;<\; T_\mathrm{sol} \;<\; T ,
+  \label{eq:rt-invariant}
+\end{equation}
+
+with $\overline{t}_\mathrm{solve}$ the average solve time,
+$T_\mathrm{sol}$ the solution time window and $T$ the horizon: a policy
+must arrive before the previous one expires, and it must not claim
+validity beyond the horizon it was computed for. This invariant is
+checked from the solver's diagnostics topic at the start of every
+session and is the quantity that governs the failure mode analysed in
+\cref{sec:hw-challenges}.
+
+\begin{table}[htbp]
+  \centering
+  \caption[\ocs{} operating point on \hero{}]{%
+    \ocs{} operating point for on-robot operation, as configured in
+    \texttt{task\_hardware.info}. Velocity limits appear twice by
+    design: once as a soft constraint inside the optimisation and once
+    as a hard clamp in the bridge.}
+  \label{tab:mpc-config}
+  \begin{tabularx}{\linewidth}{@{}lXl@{}}
+    \toprule
+    Group & Parameter & Value \\
+    \midrule
+    Model    & state / input dimension        & $9$ / $8$ \\
+             & base frame, \ee{} frame        & \texttt{footprint}, \texttt{tool0} \\
+             & fixed joints                   & both wheel joints \\
+    \addlinespace
+    Solver   & algorithm                      & SLQ \\
+             & iterations per solve           & $1$ \\
+             & threads                        & $8$ \\
+             & backward-pass step, integrator & \qty{2}{\milli\second}, ODE45 \\
+             & rollout step                   & \qty{10}{\milli\second} \\
+             & feedback policy                & disabled (feed-forward) \\
+    \addlinespace
+    \mpc{}   & horizon $T$                    & \qty{1.2}{\second} \\
+             & solution time window $T_\mathrm{sol}$ & \qty{1.0}{\second} \\
+             & nominal solve rate             & \qty{10}{\hz} \\
+             & policy evaluation rate         & \qty{100}{\hz} \\
+    \addlinespace
+    Cost     & $R_\mathrm{base}$, $R_\mathrm{arm}$ & $0.085\,I_2$, $0.04\,I_6$ \\
+             & $\mu_\mathrm{p}$, $\mu_\mathrm{o}$ (running and final) & $10$, $5$ \\
+    \addlinespace
+    Limits   & base velocity                  & \qty{\pm 0.1}{\meter\per\second}, \qty{\pm 0.1}{\radian\per\second} \\
+             & arm joint velocity             & \qty{\pm 0.3}{\radian\per\second} \\
+             & arm joint positions           & UR safety-panel limits \\
+             & self-collision pairs, margin   & $12$, \qty{0.11}{\meter} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Derivatives are not written by hand. \ocs{} traces the cost terms, the
+constraints and the system equation with CppAD and compiles the
+resulting derivative code into shared libraries on first use, which is
+the delay mentioned in \cref{sec:distributed-arch}. The cache is keyed
+by the model, not by the tuning: changing the kinematic model, the fixed
+joints or the collision pair list invalidates it and requires a
+regeneration, whereas changing a weight, a limit or the horizon takes
+effect on the next restart. This distinction matters in practice,
+because a stale cache silently keeps the old model while the
+configuration file suggests otherwise.
 
 % ---------------------------------------------------------------------
 \section{Hardware Interfaces and ROS Control Layer Integration}
 \label{sec:hw-interfaces}
 
-% TODO: MRT bridge -> base u(0,1) as TwistStamped on /cmd_vel_ocs2
-% (twist_mux -> diff_drive_controller); arm mpcState ->
-% joint_trajectory_controller. Safety: arm per-joint rate limit,
-% OCS2-relative-time policy validity hold, observation monotonicity
-% guard, reset bounded wait. Cite ros2control.
+The MRT bridge is the only component written specifically for this
+deployment. It closes the loop between the \ocs{} policy and
+\texttt{ros2\_control}~\cite{ros2control}, and it runs at
+\qty{100}{\hz} on the IPC.
+
+Each cycle begins with an observation. The base pose $(p_x, p_y, \psi)$
+is taken from the drive controller's odometry, with the yaw extracted
+from the reported quaternion, and $\qarm$ is looked up by joint name in
+\texttt{/joint\_states}; a missing joint aborts the cycle with a
+throttled warning instead of silently inserting a zero. The observation
+timestamp is the later of the two message stamps, expressed relative to
+the origin fixed at the first accepted measurement, which is the
+relative time axis that makes the split deployment insensitive to clock
+offsets.
+
+Before the first command, the bridge performs a reset handshake with the
+\mpc{} node. The initial reference must not move the robot, so the
+bridge computes the current \ee{} pose by forward kinematics from the
+latest observation and sends it as a two-knot target trajectory inside
+the reset request: the solver starts by holding the pose the robot is
+already in. The handshake is guarded on both sides. The bridge waits for
+the reset service rather than assuming it exists, logs an actionable
+error after \qty{15}{\second} and keeps waiting, and retries the request
+if the response is lost---a single dropped reply over the network must
+not leave the bridge dead. After a handshake the time-axis baseline is
+reset as well, because the blocking call may have consumed several
+seconds and the next observation would otherwise look like a time jump.
+
+The base command is the first two elements of the optimised input,
+published as a stamped twist on \texttt{/cmd\_vel\_ocs2} rather than
+directly on the drive controller's command topic. A \texttt{twist\_mux}
+arbitrates between sources by priority, with manual teleoperation above
+\ocs{}, so an operator can always override or stop a
+\qty{400}{\kilo\gram} platform that is executing an optimised
+trajectory. The published twist is clamped to the same base velocity
+bounds that the optimisation uses as a soft constraint; the clamp is the
+hard backstop for the case where the soft constraint is violated.
+
+The arm command needs more care, because the joint-trajectory controller
+accepts a position setpoint over its topic interface without enforcing
+any velocity limit. The bridge samples the optimised arm state
+\qty{0.6}{\second} ahead and publishes it as a single trajectory point
+with that time from start, but it first clamps each joint's step to
+$\dot{q}_\mathrm{max} \cdot t_\mathrm{preview} = \qty{0.18}{\radian}$
+around the currently measured position. Because the next cycle repeats
+the computation \qty{10}{\milli\second} later, the arm still advances
+towards the target, at a rate bounded by
+\qty{0.3}{\radian\per\second}. When the clamp engages, the bridge warns;
+frequent warnings mean the optimised state is jumping between solves,
+which turned out to be a useful diagnostic and is taken up in
+\cref{sec:hw-challenges}.
+
+Whenever the bridge cannot produce a trustworthy command it publishes a
+hold: a zero twist and an arm trajectory pinned at the measured joint
+positions. Getting this right required two details that are invisible in
+the algorithm but decide whether the robot actually stops. The twist is
+stamped at the moment of publication, because a hold issued right after
+a blocking call would otherwise carry a stale stamp and be rejected by
+the drive controller as timed out. The arm trajectory carries a zero
+header stamp, which the controller reads as ``start now''; a wall-clock
+stamp arrives a few milliseconds late and the whole trajectory is
+rejected as ending in the past, so the hold never applies.
+\Cref{tab:bridge-guards} lists the conditions that trigger a hold.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Guards implemented in the MRT bridge]{%
+    Guards implemented in the MRT bridge. Thresholds are launch
+    arguments, not entries of the task configuration file.}
+  \label{tab:bridge-guards}
+  \begin{tabularx}{\linewidth}{@{}lX@{}}
+    \toprule
+    Condition & Reaction \\
+    \midrule
+    Measurement older than \qty{0.2}{\second}
+      & hold; the state estimate is not trusted \\
+    Observation time steps backwards, or forwards by more than
+    \qty{0.5}{\second}
+      & drop the frame to protect the solver's time axis; after $20$
+        consecutive drops, accept the new time as baseline and
+        re-handshake \\
+    Policy validity below one solve interval
+      & warn: the robot is outrunning the optimiser \\
+    Policy validity exhausted
+      & hold instead of evaluating a policy beyond its window \\
+    No new policy for $2\,T_\mathrm{sol}$
+      & hold; the workstation or the link is assumed busy \\
+    No new policy for $5\times$ that time
+      & re-run the reset handshake, on the assumption that the \mpc{}
+        node restarted and no longer accepts the current observations \\
+    Commanded arm step beyond the rate limit
+      & clamp the step and warn \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Below the bridge, the control chain is the production \hero{} stack with
+two deliberate deviations. The UR driver is started in headless mode
+with the joint-trajectory controller active, so that whole-body control
+does not depend on an operator starting a program on the teach pendant;
+the trade-off is that the pendant must be in remote mode when the driver
+starts, otherwise the external control program has to be re-sent. The
+controller stopper, which deactivates arm controllers when no
+program runs on the arm, keeps both the joint-trajectory controller and
+the drive controller in its list of controllers to leave alone. This
+preserves the safety interlock of the arm while ensuring that a
+protective stop does not silently drop the controller through which
+\ocs{} actuates.
+
+Two limitations of the integration follow from the choices above rather
+than from tuning, and both bound what the experiments in the following
+chapters can show. The controller's notion of where the robot is comes
+from wheel odometry alone, so \ee{} poses reconstructed from the
+internal state are consistent within a run but not absolute; and the
+optimisation reasons about the robot's own geometry only, so a
+whole-body plan is collision-free with respect to the platform and blind
+to the workspace around it.

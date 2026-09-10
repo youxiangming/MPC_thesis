@@ -7,146 +7,409 @@
   Motion Planning}
 \label{sec:lmas}
 
-Manufacturing is increasingly shaped by short product life cycles, high
-variant diversity, and volatile demand. Rigid, station-based assembly
-lines are optimised for a fixed product mix and a stable takt time. When
-the product or the required volume changes, the layout, material flow,
-and station balancing must be reconfigured, which is slow and
-capital-intensive~\cite{Huettemann2016LMAS}. The flexibility that
-volatile demand requires and the rigidity of a fixed line pull in
-opposite directions, which has motivated alternative production
-paradigms.
+Manufacturing operates under shortening product life cycles, growing
+variant diversity, and demand that fluctuates over the life of a
+product; a CIRP-level review of product-variety management documents
+this trend across industries and quantifies the cost it imposes on
+assembly~\cite{ElMaraghy2013Variety}. Rigid, station-based assembly
+lines are dimensioned for a fixed product mix and a stable takt time.
+When the product or the required volume changes, layout, material flow,
+and station balancing have to be reconfigured, which is slow and
+capital-intensive~\cite{Huettemann2016LMAS}.
 
-The \emph{Line-less Mobile Assembly System} (LMAS) is one such paradigm
-studied at the Laboratory for Machine Tools and Production Engineering
-(WZL) of RWTH Aachen University~\cite{Kern2019LMAS,Buckhorst2022LMAS}.
-Instead of fixing products, tools, and workers to a sequence of static
-stations, an LMAS treats all production resources---mobile robots,
-mobile manipulators, workpiece carriers, and human workers---as
-\emph{mobile, freely relocatable entities} in a shared shop floor. The
-assembly ``line'' is dissolved into a dynamically reconfigurable
-constellation of resources that are matched to the current order at run
-time. This yields a spatially and temporally flexible production system
-that can absorb product changes, demand fluctuations, and disturbances
-without a physical relayout.
+Manufacturing research has answered this tension with a family of
+paradigms that trade dedicated throughput for adaptability. Flexible
+Manufacturing Systems provide a fixed set of capabilities that can be
+re-combined for a pre-defined product family, whereas Reconfigurable
+Manufacturing Systems are designed so that capacity and functionality
+themselves can be changed by adding, removing, or rearranging
+modules~\cite{Koren1999RMS}. ElMaraghy contrasts the two paradigms and
+places them on a common axis of changeability, with flexibility bought
+in advance in the former case and acquired on demand in the
+latter~\cite{ElMaraghy2005FRMS}. In assembly specifically, this line of
+work has produced modular station concepts in which workstations are no
+longer traversed in a fixed sequence~\cite{Kern2016Modular}.
 
-A central enabler of the LMAS concept is the \emph{mobile manipulator}: a
-robotic arm mounted on a mobile base. The mobile base provides an
-effectively unbounded workspace and the ability to reposition itself
-between and within tasks, while the arm provides the dexterity required
-for the assembly operation itself. Combining the two allows a single
-resource to service many workstations and to reach parts of a large
-workpiece that no fixed-base arm could cover.
+The \emph{Line-less Mobile Assembly System} (LMAS) pushes this
+development to its limit by removing the fixed station grid
+altogether~\cite{Huettemann2019LMAS}. Instead of binding products,
+tools, and workers to a sequence of static stations, an LMAS models all
+production resources---mobile robots, mobile manipulators, workpiece
+carriers, and human workers---as \emph{mobile, freely relocatable
+entities} on a shared shop floor, whose assignment, sequence, and
+location are planned at run time~\cite{Buckhorst2019Planning}. The
+assembly ``line'' thus becomes a reconfigurable constellation of
+resources matched to the current order, and control of that
+constellation is decentralised so that the system can absorb product
+changes, demand fluctuations, and disturbances without a physical
+relayout~\cite{Buckhorst2022LMAS}.
 
-This freedom changes the motion-planning problem. In a classical line, an industrial arm operates in a
-carefully engineered, static cell: the part arrives at a known pose, the
+A central enabler of the LMAS concept is the \emph{mobile manipulator}:
+a robotic arm mounted on a mobile base
+(\cref{fig:mobile-manipulator}). The mobile base extends the reachable
+workspace far beyond the arm's own envelope and lets the robot
+reposition itself between and within tasks, while the arm provides the
+dexterity required for the assembly operation itself. Surveys of the
+field identify exactly this combination (one resource servicing many
+workstations, covering workpieces larger than a fixed-base arm could
+reach) as the motivation for wheeled mobile
+manipulation~\cite{Sandakalum2022Survey,Thakar2023MobileManip}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      dim/.style={{Latex[length=1.5mm]}-{Latex[length=1.5mm]}, thin},
+      link/.style={line width=1.1pt, line cap=round},
+      jt/.style={circle, draw, fill=white, inner sep=0pt, minimum size=2.0mm},
+      ax/.style={-{Latex[length=1.6mm]}, thick},
+    ]
+    % =================================================================
+    % (a) top view: planar base pose and the no-slip direction
+    % =================================================================
+    \begin{scope}[shift={(0,0)}]
+      \draw[ax] (0,0) -- (0.85,0) node[lbl, right=0.5mm] {$x_W$};
+      \draw[ax] (0,0) -- (0,0.85) node[lbl, above=0.5mm] {$y_W$};
+      \node[lbl, below left=0mm] at (0,0) {$W$};
+
+      \begin{scope}[shift={(2.6,1.75)}, rotate=25]
+        \draw[fill=gray!12] (-0.92,-0.60) rectangle (0.92,0.60);
+        \draw[fill=gray!40] (-0.24,-0.60) rectangle (0.24,-0.76);
+        \draw[fill=gray!40] (-0.24, 0.60) rectangle (0.24, 0.76);
+        \draw[ax] (0,0) -- (1.45,0) node[lbl, above right=-0.4mm] {$x_B$};
+        \draw[ax] (0,0) -- (0,1.20) node[lbl, above=0.5mm] {$y_B$};
+        % blocked lateral direction
+        \draw[dashed, gray, {Latex[length=1.4mm]}-{Latex[length=1.4mm]}]
+          (0,-1.35) -- (0,-0.80);
+        \draw[thick] (-0.13,-1.20) -- (0.13,-1.46);
+        \draw[thick] (-0.13,-1.46) -- (0.13,-1.20);
+      \end{scope}
+      \node[lbl, anchor=west] at (3.55,0.55) {no side-slip};
+
+      \draw[dim] (0,-0.50) -- (2.6,-0.50) node[lbl, midway, below] {$x_b$};
+      \draw[dim] (-0.50,0) -- (-0.50,1.75) node[lbl, midway, left] {$y_b$};
+      \draw[dashed, gray] (2.6,1.75) -- (2.6,-0.50);
+      \draw[dashed, gray] (2.6,1.75) -- (-0.50,1.75);
+      \draw[dashed, gray] (2.6,1.75) -- ++(1.75,0);
+      \draw[-{Latex[length=1.4mm]}] (3.85,1.75) arc (0:25:1.25);
+      \node[lbl] at (4.05,2.12) {$\theta_b$};
+
+      \node[lbl, anchor=north] at (1.9,-1.10) {(a) base pose in the plane};
+    \end{scope}
+
+    % =================================================================
+    % (b) side view: base plus six-joint arm
+    % =================================================================
+    \begin{scope}[shift={(6.9,-0.60)}]
+      \draw[thick] (-0.4,-0.25) -- (5.0,-0.25);
+      \foreach \x in {-0.25,0.10,...,4.90}
+        \draw[gray, thin] (\x,-0.25) -- ++(-0.16,-0.16);
+
+      \draw[fill=gray!12] (0.0,0.12) rectangle (2.3,0.95);
+      \draw[fill=gray!40] (0.5,0.12) circle (0.37);
+      \draw[fill=gray!40] (1.8,0.12) circle (0.37);
+      \node[lbl] at (1.15,0.60) {base};
+
+      \coordinate (a0) at (1.75,0.95);
+      \coordinate (a1) at (1.75,1.70);
+      \coordinate (a2) at (3.00,2.45);
+      \coordinate (a3) at (4.05,1.75);
+      \coordinate (a4) at (4.60,2.08);
+      \draw[link] (a0) -- (a1) -- (a2) -- (a3) -- (a4);
+      \node[jt] at (a0) {}; \node[jt] at (a1) {};
+      \node[jt] at (a2) {}; \node[jt] at (a3) {};
+      \node[lbl, anchor=south] at (2.35,2.70)
+        {UR10e: six revolute\\joints $q_1,\dots,q_6$};
+
+      \draw[ax] (a4) -- ++(0.60,0.25);
+      \draw[ax] (a4) -- ++(-0.25,0.60);
+      \node[lbl, anchor=north west] at (4.62,1.90) {\ee{}\\pose in $SE(3)$};
+
+      \node[lbl, anchor=north] at (2.3,-0.75) {(b) arm mounted on the base};
+    \end{scope}
+  \end{tikzpicture}
+  \caption[Mobile manipulator: base and arm degrees of freedom]{%
+    Wheeled mobile manipulator of the type studied here. (a)~The base
+    contributes the planar pose $(x_b,y_b,\theta_b)$; its wheels cannot
+    slide sideways, which constrains the velocities it can produce but
+    not the poses it can reach. (b)~The arm contributes six revolute
+    joints, and the task is the pose of the \ee{} frame in $SE(3)$.
+    Counting these groups against the task is what makes the system
+    redundant (\cref{eq:grubler,eq:redundancy}).}
+  \label{fig:mobile-manipulator}
+\end{figure}
+
+Adding a mobile base to the arm changes the motion-planning problem in
+three ways. In a classical line, an industrial arm operates in an
+engineered, static cell: the part arrives at a known pose, the
 surroundings are fixed, and the arm executes largely pre-programmed
-trajectories. In an LMAS, several assumptions no longer hold:
+trajectories. In an LMAS, three of the assumptions behind that mode of
+operation are weakened.
 
-\begin{itemize}
-  \item \textbf{Large, base-dependent workspace.} The target \ee{} pose
-        may lie outside the reach of the arm from the current base pose,
-        so the base and the arm must \emph{cooperate} to accomplish a
-        single task.
-  \item \textbf{Changing, shared environment.} Resources move relative to
-        one another; the environment is neither static nor fully known in
-        advance, so trajectories cannot be fully pre-computed offline.
-  \item \textbf{Kinematic redundancy.} A mobile base combined with a
-        six-degree-of-freedom (\SI{6}{DOF}) arm is highly redundant with
-        respect to an \ee{} task. This redundancy is an opportunity---it
-        can be exploited for reach, manipulability, or obstacle
-        avoidance---but only if the planner reasons about the base and
-        the arm \emph{jointly}.
-\end{itemize}
+\paragraph{Large, base-dependent workspace.}
+The target \ee{} pose may lie outside the reach of the arm from the
+current base pose, so base and arm have to \emph{cooperate} to
+accomplish a single task. Both mobile-manipulation surveys treat the
+choice of a base pose that renders the task reachable and
+well-conditioned as a planning problem in its own
+right~\cite{Sandakalum2022Survey,Thakar2023MobileManip}.
 
-Together, these conditions call for motion planning that is
-\emph{reactive}, that spans the \emph{combined} configuration space of
-base and arm, and that resolves the resulting redundancy deliberately
-rather than as a by-product. Whole-body motion planning, introduced
-next, is aimed at exactly this problem.
+\paragraph{Shared workspace with moving resources.}
+Because resources are relocatable, parts of the environment move
+relative to one another during operation. How much of the environment is
+known in advance depends on the plant: a shop floor with tracked
+resources and a maintained world model is partially predictable, whereas
+human co-workers and manually moved carriers are not. The consequence
+for planning is therefore not that offline computation is impossible,
+but that a trajectory computed once for an assumed scene has to be
+revised while it is executed, which is the case that motivates online
+re-planning~\cite{Finean2023ContextAware}.
+
+\paragraph{Kinematic redundancy.}
+The base adds degrees of freedom (DOF) to a system that already has as
+many as the task requires. The arm is a spatial open chain with
+$N = 7$ links (including its mounting link) connected by $J = 6$
+revolute joints, each contributing $f_i = 1$ freedom. Gr\"ubler's
+formula for a spatial mechanism ($m = 6$) gives its
+mobility~\cite{Lynch2017ModernRobotics}
+\begin{equation}
+  \label{eq:grubler}
+  \mathrm{dof} = m\,(N - 1 - J) + \sum_{i=1}^{J} f_i
+               = 6\,(7 - 1 - 6) + 6 = 6 .
+\end{equation}
+The base contributes a planar pose, so the whole-body configuration is
+$q = (x_b, y_b, \theta_b, q_1, \dots, q_6)$ and the configuration space
+is nine-dimensional, while the \ee{}-pose task lives in the
+six-dimensional $SE(3)$:
+\begin{equation}
+  \label{eq:redundancy}
+  \dim \mathcal{Q} - \dim \mathcal{T} = 9 - 6 = 3 .
+\end{equation}
+Three configuration-space directions therefore leave the \ee{} pose
+unchanged. The picture differs at velocity level, because a
+differential-drive base cannot slide sideways: the rolling-without-slip
+condition $\dot{x}_b \sin\theta_b - \dot{y}_b \cos\theta_b = 0$ is a
+non-holonomic constraint, so the base offers only two instantaneous
+inputs (a forward and a turning rate) while still reaching all three
+planar coordinates over time~\cite{Lynch2017ModernRobotics,%
+Siciliano2009Robotics}. The instantaneous input vector is therefore
+eight-dimensional against a six-dimensional task twist, leaving two
+degrees of instantaneous redundancy. This redundancy is an opportunity:
+the same \ee{} motion can be produced by infinitely many base--arm
+combinations, and the surplus can be spent on reach, on
+manipulability~\cite{Yoshikawa1985Manipulability}, or on obstacle
+avoidance~\cite{Dietrich2015NullSpace}. It is an opportunity only if the
+planner reasons about base and arm \emph{jointly}; a planner that fixes
+the base first spends the redundancy before it can be used.
+
+Together, these three conditions call for motion planning that is
+reactive, that spans the \emph{combined} configuration space of base and
+arm, and that resolves the resulting redundancy deliberately rather than
+as a by-product. Whole-body motion planning, introduced next, addresses
+exactly this problem.
 
 % =====================================================================
 \section{The Need for Whole-Body Motion Planning: From Sequential to
   Unified Approaches}
 \label{sec:need-wholebody}
 
-The most common way to command a mobile manipulator is to treat the base
-and the arm as two independent subsystems and to plan for them
-\emph{sequentially}: a navigation stack first drives the base to a
-suitable stand-off pose, and only then does an arm-motion planner (for
-example, a sampling-based planner behind MoveIt~\cite{moveit2}) compute a
-trajectory for the arm from that fixed base pose. This decoupled scheme
-is simple, modular, and reuses mature, well-tested components, which
-explains its prevalence in industry.
+The most common way to command a mobile manipulator is to treat base and
+arm as two independent subsystems and to plan for them
+\emph{sequentially}: a navigation stack such as
+Nav2~\cite{Macenski2020Nav2} first drives the base to a suitable
+stand-off pose; an arm-motion framework such as
+MoveIt~\cite{moveit2} then solves the inverse kinematics for the target
+\ee{} pose from that now-fixed base pose and plans a joint-space
+trajectory to the resulting configuration, typically with a
+sampling-based planner~\cite{Sucan2012OMPL}. This decoupled scheme is
+modular and, above all, built from components that are mature and
+widely deployed in industry, which is the practical reason for its
+prevalence; both mobile-manipulation surveys report it as the dominant
+architecture in fielded
+systems~\cite{Sandakalum2022Survey,Thakar2023MobileManip}.
 
-The decoupling, however, has intrinsic limitations that become severe in
-the LMAS setting:
+Decoupling has three consequences that become severe in the LMAS
+setting; \cref{fig:decoupled-vs-wholebody} contrasts the two schemes.
 
-\begin{itemize}
-  \item \textbf{Loss of optimality and reach.} Choosing the base pose
-        \emph{before} planning the arm discards the coupling between the
-        two subsystems. A base pose that looks reasonable geometrically
-        may leave the arm near a singularity or a joint limit, or may
-        make the \ee{} target unreachable, even though a jointly chosen
-        base--arm configuration exists.
-  \item \textbf{Stop-and-go behaviour.} Sequential execution---drive,
-        stop, then manipulate---prevents the base and the arm from moving
-        \emph{simultaneously}. Tasks in which the \ee{} must follow a
-        continuous path longer than the arm's reach (a common LMAS case)
-        cannot be executed smoothly this way.
-  \item \textbf{Poor disturbance rejection.} A plan computed once, for a
-        fixed base pose, cannot react to base drift, moving obstacles, or
-        an updated target without re-triggering the whole pipeline.
-\end{itemize}
+\paragraph{Loss of reach and of solution quality.}
+Choosing the base pose \emph{before} planning the arm discards the
+coupling between the two subsystems. A base pose that looks reasonable
+geometrically may leave the arm near a singularity or a joint limit, or
+may make the \ee{} target unreachable, even though a jointly chosen
+base--arm configuration
+exists~\cite{Sandakalum2022Survey,Thakar2023MobileManip}. Both surveys
+describe base placement and arm planning as coupled sub-problems, and
+the holistic controller of Haviland et~al.\ is motivated by the same
+observation~\cite{Haviland2022Holistic}.
 
-\emph{Whole-body motion planning} removes this artificial boundary by
-treating the mobile base and the arm as a \emph{single} redundant
-kinematic (or dynamic) system and planning their motion in one unified
-optimisation. The \ee{} task is expressed directly in task space, and the
-planner is free to distribute the required motion between the base and the
-arm according to a chosen cost criterion. This directly
-addresses the limitations above: the full combined workspace becomes
-available, base and arm move simultaneously along one coordinated
-trajectory, and, once embedded in a feedback loop, the plan reacts
-continuously to a changing target and environment.
+\paragraph{Stop-and-go behaviour.}
+Sequential execution---drive, stop, then manipulate---prevents base and
+arm from moving \emph{simultaneously}. Tasks in which the \ee{} has to
+follow a continuous path longer than the arm's reach, which is a common
+LMAS case, cannot be executed smoothly this
+way~\cite{BurgessLimerick2024ReactiveBase,Pankert2020PerceptiveMPC}.
+Reported gains of on-the-move manipulation over the stop-and-go pipeline
+motivate both the reactive base controller of Burgess-Limerick
+et~al.\ and the continuous mobile manipulation of Pankert and Hutter.
+
+\paragraph{Cost of reacting to change.}
+A plan computed once, for a fixed base pose, does not by itself account
+for base drift, moving obstacles, or an updated target. This is a
+question of degree rather than of possibility: the pipeline can be
+re-triggered, and planners that predict how the scene will evolve and
+repair the trajectory online exist~\cite{Finean2023ContextAware}. What a
+decoupled pipeline cannot do cheaply is revise the \emph{base} decision,
+because that decision sits upstream of the arm plan and invalidates it.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=3.5pt, minimum height=8mm, minimum width=22mm},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      lbl/.style={font=\scriptsize, align=center},
+      lane/.style={draw, dashed, rounded corners=2pt, inner sep=6pt},
+    ]
+    % ---------- decoupled lane --------------------------------------
+    \node[box] (d1) at (0,0)    {plan base\\path};
+    \node[box] (d2) at (2.9,0)  {drive base,\\arm parked};
+    \node[box] (d3) at (5.8,0)  {stop,\\solve IK};
+    \node[box] (d4) at (8.7,0)  {plan and\\execute arm};
+    \draw[flow] (d1) -- (d2); \draw[flow] (d2) -- (d3);
+    \draw[flow] (d3) -- (d4);
+    \node[lane, fit=(d1)(d4),
+          label={[lbl]above:\textbf{Decoupled:} base and arm move in turn}] {};
+    \node[lbl, anchor=north] at (5.8,-0.75)
+      {a new base pose invalidates the arm plan};
+
+    % ---------- whole-body lane -------------------------------------
+    \node[box, minimum width=34mm] (w1) at (1.1,-3.2)
+      {\ee{} reference\\in task space};
+    \node[box, minimum width=40mm] (w2) at (5.9,-3.2)
+      {one optimisation over\\$(x_b,y_b,\theta_b,q_1,\dots,q_6)$};
+    \node[box, minimum width=22mm] (w3a) at (9.9,-2.65) {base twist};
+    \node[box, minimum width=22mm] (w3b) at (9.9,-3.75) {arm rates};
+    \draw[flow] (w1) -- (w2);
+    \draw[flow] (w2.east) -- (w3a.west);
+    \draw[flow] (w2.east) -- (w3b.west);
+    \draw[flow] ([yshift=-2mm]w2.south) -- ++(0,-0.7) -| ([yshift=-2mm]w1.south)
+      node[lbl, pos=0.25, below] {state feedback, re-solve each step};
+    \node[lane, fit=(w1)(w2)(w3a)(w3b),
+          label={[lbl]above:\textbf{Whole-body:} base and arm move together}] {};
+  \end{tikzpicture}
+  \caption[Decoupled versus whole-body command of a mobile
+    manipulator]{%
+    Decoupled versus whole-body command of a mobile manipulator. The
+    decoupled pipeline fixes the base pose upstream of the arm plan, so
+    the two subsystems act in sequence. A whole-body scheme optimises
+    over the joint configuration, emits base and arm commands from the
+    same solution, and closes the loop on the measured state.}
+  \label{fig:decoupled-vs-wholebody}
+\end{figure}
+
+\emph{Whole-body motion planning} removes this boundary by treating
+mobile base and arm as a \emph{single} redundant kinematic (or dynamic)
+system and planning their motion in one
+optimisation~\cite{Lynch2017ModernRobotics,Haviland2022Holistic}. The
+task is expressed directly in task space and the planner distributes the
+required motion between base and arm according to a chosen cost
+criterion, resolving the redundancy of \cref{eq:redundancy} explicitly
+rather than by construction. The formulation generalises redundancy
+resolution for kinematically redundant
+manipulators~\cite{Siciliano2009Robotics} and null-space projection for
+a fixed base~\cite{Dietrich2015NullSpace} to base and arm together.
+This addresses the three points above: the full combined workspace
+becomes available, base and arm move simultaneously along one
+coordinated trajectory, and the base decision is revisited at every
+re-solve instead of being frozen upstream. How well the last property
+holds in practice depends on how fast the optimisation can be re-solved
+relative to the rate at which the scene changes; this work quantifies
+that trade-off on hardware in \cref{ch:hardware}.
 
 Formulating whole-body planning as a receding-horizon optimal-control
-problem, i.e.\ as \emph{Model Predictive Control}
-(\mpc{})~\cite{Rawlings2017MPC}, is well suited to mobile
-manipulation. At each control step the planner solves a finite-horizon
-optimisation over the whole-body state and input, applies the first part
-of the resulting policy, and re-plans as new state estimates arrive.
-Constraints such as joint and velocity limits, self-collision, and the
-non-holonomic behaviour of a differential-drive base are handled inside
-the same optimisation, and the receding-horizon re-planning provides the
-reactivity that the LMAS setting requires. The open-source
-\ocs{}~(Optimal Control for Switched Systems)
-framework~\cite{ocs2Toolbox} provides a mature implementation of this
-approach and has been demonstrated for whole-body loco-manipulation on
-legged and wheeled platforms~\cite{Sleiman2021UnifiedMPC}. It is the
-framework integrated and evaluated in this work.
+problem, that is, as \emph{Model Predictive Control}
+(\mpc{})~\cite{Rawlings2017MPC}, suits mobile manipulation for two
+reasons. First, the constraints that make the problem hard---joint and
+velocity limits, self-collision, and the non-holonomic condition of a
+wheeled base---are inequality constraints on states and inputs, which is
+the form an \mpc{} formulation handles
+natively~\cite{Mayne2000Constrained}. Second, the solver re-plans from
+the measured state at every step, so the same mechanism that produces
+the plan also provides the feedback. Whole-body \mpc{} on this basis has
+been demonstrated on a dynamically stable mobile
+manipulator~\cite{Minniti2019WholeBodyMPC} and for continuous mobile
+manipulation from onboard perception~\cite{Pankert2020PerceptiveMPC}.
+The open-source \ocs{}~(Optimal Control for Switched Systems)
+framework~\cite{ocs2Toolbox} provides an implementation of this approach
+and has been used for whole-body loco-manipulation on legged and wheeled
+platforms~\cite{Sleiman2021UnifiedMPC}.
 
 % =====================================================================
 \section{Objectives and Structure of This Work}
 \label{sec:objectives}
 
-\paragraph{Objective.}
+\subsection{Objective}
+\label{sec:obj-goal}
 The goal of this work is to \emph{integrate and validate} whole-body
 \mpc{}, based on the \ocs{} framework, on the \hero{} mobile
-manipulator---a differential-drive mobile base carrying a Universal
-Robots UR10e arm~\cite{UR10e}---and to characterise the resulting
+manipulator (a differential-drive mobile base carrying a Universal
+Robots UR10e arm~\cite{UR10e}), and to characterise the resulting
 \ee{}-pose tracking behaviour under realistic conditions. In contrast to
-studies that remain in simulation, the emphasis here is on a
-\emph{deployable} system: the \mpc{} runs in a distributed,
-real-time software architecture on the physical robot, and its
-performance is assessed on hardware.
+studies that remain in simulation, the emphasis is on a
+\emph{deployable} system: the \mpc{} runs in a distributed, real-time
+software architecture on the physical robot, and its performance is
+assessed on hardware.
 
-\paragraph{Scope and contributions.}
+\subsection{Requirements on the Motion Planner}
+\label{sec:requirements}
+The discussion above yields the criteria that any candidate planner has
+to satisfy on \hero{}. They are stated here explicitly, so that the
+comparison in \cref{sec:sota-selection} has a fixed reference and does
+not rest on an implicit notion of suitability. \Cref{tab:requirements}
+lists them.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Requirements on the motion planner for \hero{}]{%
+    Requirements on the motion planner for \hero{}, with the argument
+    each one follows from. \Cref{tab:sota-comparison} scores the
+    candidate approaches against exactly these criteria.}
+  \label{tab:requirements}
+  \begin{tabularx}{\linewidth}{@{}llX@{}}
+    \toprule
+    ID & Requirement & Origin \\
+    \midrule
+    R1 & Coordinated base--arm motion
+       & Reach and stop-and-go arguments, \cref{sec:need-wholebody} \\
+    R2 & Explicit constraint handling
+       & Joint, velocity, non-holonomic and self-collision limits,
+         \cref{eq:redundancy} and \cref{sec:need-wholebody} \\
+    R3 & Deliberate redundancy resolution
+       & Three surplus configuration directions, \cref{eq:redundancy} \\
+    R4 & Online re-planning from the measured state
+       & Moving resources in a shared workspace, \cref{sec:lmas} \\
+    R5 & Real-time feasibility on the on-board computer
+       & Deployment on \hero{} rather than in simulation,
+         \cref{sec:obj-goal} \\
+    R6 & ROS~2 interfaces
+       & Integration with the existing \hero{} software stack,
+         \cref{ch:integration} \\
+    R7 & Transparency and analysability
+       & Behaviour has to be diagnosable on hardware,
+         \cref{ch:hardware} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Scope and Contributions}
+\label{sec:obj-contrib}
 The concrete contributions of this thesis are:
 \begin{enumerate}
   \item the selection of a suitable whole-body motion-planning approach
         for the \hero{} platform, following a comparison of candidate
-        frameworks (\cref{ch:sota});
+        frameworks against \cref{tab:requirements} (\cref{ch:sota});
   \item the integration of \ocs{} whole-body \mpc{} into the \hero{}
         software stack, including a distributed host/on-board
         architecture for real-time operation, the whole-body model and
@@ -161,17 +424,18 @@ The concrete contributions of this thesis are:
         (\cref{ch:hardware}).
 \end{enumerate}
 
-\paragraph{Structure.}
-The remainder of this thesis is organised as follows.
-\Cref{ch:sota} reviews the state of the art in whole-body motion planning
-for mobile manipulators, classifies the main approaches, presents
-\ocs{} and alternative frameworks, and justifies the selection made here.
-\Cref{ch:integration} describes the \hero{} platform and the integration
-of \ocs{} into it: the distributed architecture, the whole-body model and
-its parameterisation, and the interfaces to the low-level control layer.
-\Cref{ch:simulation} presents the simulation-based validation using a
-kinematic closed-loop (dummy MRT) setup. \Cref{ch:hardware} reports on
-the hardware deployment, the challenges and their mitigations, and
-preliminary \ee{}-tracking results. \Cref{ch:conclusion} summarises the
-work, reflects critically on its limitations, and gives recommendations
-for resolving the remaining issues.
+\subsection{Structure}
+\label{sec:obj-structure}
+\Cref{ch:sota} reviews the state of the art in whole-body motion
+planning for mobile manipulators, classifies the main approaches,
+presents \ocs{} and alternative frameworks, and justifies the selection
+made here. \Cref{ch:integration} describes the \hero{} platform and the
+integration of \ocs{} into it: the distributed architecture, the
+whole-body model and its parameterisation, and the interfaces to the
+low-level control layer. \Cref{ch:simulation} presents the
+simulation-based validation using a kinematic closed-loop (dummy MRT)
+setup. \Cref{ch:hardware} reports on the hardware deployment, the
+challenges and their mitigations, and preliminary \ee{}-tracking
+results. \Cref{ch:conclusion} summarises the work, reflects critically
+on its limitations, and gives recommendations for resolving the
+remaining issues.

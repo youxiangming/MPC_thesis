@@ -3,252 +3,480 @@
   Manipulators}
 \label{ch:sota}
 
-The previous chapter argued that the Line-less Mobile Assembly System
+\Cref{ch:introduction} argues that the Line-less Mobile Assembly System
 (LMAS) setting calls for whole-body motion planning rather than a
-decoupled base--arm pipeline. This chapter surveys how the literature
-approaches the problem and narrows the field down to the framework used
-in the remainder of this thesis. \Cref{sec:sota-classification}
-introduces a classification of motion-planning approaches for mobile
-manipulators. \Cref{sec:sota-holistic} then focuses on \emph{holistic}
-(whole-body) planners, presenting the \ocs{} framework
-(\cref{sec:sota-ocs2}) and the main alternatives
-(\cref{sec:sota-alternatives}). \Cref{sec:sota-selection} compares the
-candidates against the requirements of the \hero{} platform and
-justifies the selection of \ocs{}. The synthesis of the applied and
-open-source landscape draws, in part, on a systematic literature review
-of whole-body motion planning and control integration in robotic
-navigation stacks carried out within the same research
-project~\cite{SantAnna2026WBMPReview}.
+decoupled base--arm pipeline, and states the resulting requirements R1
+to R7 in \cref{tab:requirements}. This chapter surveys how the
+literature approaches the problem and narrows the field down to the
+framework used in the remainder of this thesis.
+\Cref{sec:sota-classification} introduces a classification of
+motion-planning approaches for mobile manipulators.
+\Cref{sec:sota-holistic} then focuses on \emph{holistic} (whole-body)
+planners, presenting the \ocs{} framework (\cref{sec:sota-ocs2}) and the
+main alternatives (\cref{sec:sota-alternatives}).
+\Cref{sec:sota-selection} scores the candidates against
+\cref{tab:requirements} and justifies the selection of \ocs{}.
 
 % ---------------------------------------------------------------------
 \section{Classification of Motion Planning Approaches}
 \label{sec:sota-classification}
 
 Motion planning for mobile manipulators can be organised along a few
-largely orthogonal axes. Systematic reviews of the
-field~\cite{Sandakalum2022Survey,Thakar2023MobileManip} distinguish
-approaches primarily by \emph{how the base and the arm are coupled} and
-by \emph{the algorithmic principle} used to generate motion; a third,
-practical axis concerns \emph{where the computation happens in time}.
+largely orthogonal axes. The two published reviews of the field
+distinguish approaches primarily by \emph{how base and arm are coupled}
+and by \emph{the algorithmic principle} used to generate
+motion~\cite{Sandakalum2022Survey,Thakar2023MobileManip}; a third,
+practical axis concerns \emph{when the computation happens}.
+\Cref{fig:sota-taxonomy} shows how the axes overlap and where the
+families discussed below fall.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      circ/.style={draw, thick, fill=gray!12, fill opacity=0.5,
+                   draw opacity=1},
+    ]
+    \def\rr{2.95}
+    \draw[circ] (0,1.60)      circle (\rr);
+    \draw[circ] (-1.62,-1.20) circle (\rr);
+    \draw[circ] (1.62,-1.20)  circle (\rr);
+
+    % --- axis names, outside the circles ----------------------------
+    \node[lbl, anchor=south] at (0,4.70)
+      {\textbf{whole-body coupling}\\base and arm solved jointly};
+    \node[lbl, anchor=north east] at (-3.15,-3.70)
+      {\textbf{optimisation over}\\\textbf{a prediction horizon}};
+    \node[lbl, anchor=north west] at (3.15,-3.70)
+      {\textbf{online, feedback-driven}\\\textbf{re-planning}};
+
+    % --- region contents (explicit breaks: no hyphenation across the
+    %     circle boundaries) --------------------------------------------
+    \node[lbl] at (0,2.80)      {whole-body\\inverse kinematics};
+    \node[lbl] at (-1.72,1.05)  {offline\\trajectory\\optimisation};
+    \node[lbl] at (1.72,1.05)   {reactive QP-IK,\\learned policies};
+    \node[lbl] at (0,-1.95)     {single-arm \mpc{},\\base pose fixed};
+    \node[lbl] at (0,-0.30)     {\textbf{whole-body}\\\textbf{\mpc{}}};
+
+    % --- outside all three ------------------------------------------
+    \node[lbl, anchor=north] at (0,-4.95)
+      {outside all three: sampling-based arm planning (MoveIt / OMPL),
+       executed after the base has stopped};
+  \end{tikzpicture}
+  \caption[Classification axes for mobile-manipulator motion
+    planning]{%
+    The three classification axes and the approaches that fall in each
+    region. Whole-body \mpc{} is the only family in the intersection of
+    all three, which is the region \cref{tab:requirements} asks for.
+    Sampling-based arm planning sits outside: it is decoupled, computed
+    before execution, and optimises no running cost.}
+  \label{fig:sota-taxonomy}
+\end{figure}
 
 \paragraph{Decoupled versus whole-body.}
 The first and, for this work, most important distinction is between
-\emph{decoupled} and \emph{whole-body} schemes.
-A decoupled scheme plans the base and the arm separately and in
-sequence: a navigation stack drives the base to a stand-off pose, after
-which an arm planner solves the manipulation task from that fixed base
-configuration. A whole-body scheme instead treats the base and the arm
-as a \emph{single} redundant kinematic (or dynamic) system and solves for
-their motion jointly, so that the task-space objective is distributed
-between base and arm by the planner itself. As motivated in
-\cref{sec:need-wholebody}, decoupling sacrifices reach, optimality, and
-reactivity, which is what whole-body planning recovers, at the
-cost of a higher-dimensional and more tightly coupled problem.
+\emph{decoupled} and \emph{whole-body} schemes. A decoupled scheme plans
+base and arm separately and in sequence: a navigation stack drives the
+base to a stand-off pose, after which an arm planner solves the
+manipulation task from that fixed base configuration. A whole-body
+scheme instead treats base and arm as a \emph{single} redundant
+kinematic (or dynamic) system and solves for their motion jointly, so
+that the task-space objective is distributed between base and arm by the
+planner itself. This is the formulation used by the holistic reactive
+controller of Haviland et~al.~\cite{Haviland2022Holistic} and by the
+whole-body \mpc{} of Minniti
+et~al.~\cite{Minniti2019WholeBodyMPC}; it generalises null-space
+redundancy resolution from a fixed base~\cite{Dietrich2015NullSpace} to
+the combined system. As set out in \cref{sec:need-wholebody}, decoupling
+sacrifices reach, solution quality, and the ability to revise the base
+decision, at the price of a higher-dimensional and more tightly coupled
+problem.
 
 \paragraph{Algorithmic principle.}
 Independently of the coupling, the motion itself can be produced by
-different families of algorithms:
+different categories of algorithm.
+
 \begin{itemize}
-  \item \textbf{Sampling-based planning} explores the configuration space
-        by randomly sampling and connecting collision-free states (for
-        example Rapidly-exploring Random Trees and Probabilistic
-        Roadmaps, as exposed through MoveIt~\cite{moveit2}). These methods
-        excel at finding feasible paths in cluttered, high-dimensional
-        spaces but do not natively optimise a running cost and are
-        typically used offline.
-  \item \textbf{Optimization-based planning} formulates motion as a
-        constrained optimisation over a trajectory. When the optimisation
-        is solved once, offline, over a full trajectory, one speaks of
-        \emph{trajectory optimization}; when it is re-solved online over a
-        receding horizon, the same principle becomes \emph{Model
-        Predictive Control} (\mpc{})~\cite{Rawlings2017MPC}. Both handle
-        joint, velocity, and collision constraints explicitly and produce
-        smooth, cost-optimal motion.
+  \item \textbf{Sampling-based planning} explores the configuration
+        space by randomly sampling and connecting collision-free states,
+        as in Probabilistic Roadmaps~\cite{Kavraki1996PRM} and
+        Rapidly-exploring Random Trees~\cite{LaValle2001RRT}, both of
+        which are exposed through OMPL and, in turn, through
+        MoveIt~\cite{Sucan2012OMPL,moveit2}. These methods are effective
+        at finding feasible paths in cluttered, high-dimensional spaces
+        and are probabilistically complete, but the path they return is
+        feasible rather than optimal with respect to a running cost, and
+        the computation is normally performed before execution rather
+        than inside a control loop~\cite{LaValle2006Planning}.
+  \item \textbf{Optimisation-based planning} formulates motion as a
+        constrained optimisation over a trajectory. Solving that
+        optimisation once, before execution, over the complete
+        trajectory is \emph{trajectory optimisation}; re-solving it
+        online over a receding horizon and applying only its first part
+        turns the same formulation into \emph{Model Predictive Control}
+        (\mpc{})~\cite{Rawlings2017MPC,Mayne2000Constrained}. Both
+        variants handle joint, velocity, and collision limits as
+        explicit constraints and return smooth motion that is optimal
+        with respect to the stated cost.
   \item \textbf{Reactive schemes} compute an instantaneous command from
-        the current state, for example through potential fields or
-        quadratic-program-based inverse kinematics (QP-IK). They are cheap
-        and fast but myopic, lacking the look-ahead needed to respect
-        long-horizon constraints.
+        the current state, for example through potential
+        fields~\cite{Khatib1986PotentialFields} or through a quadratic
+        program solved once per control step
+        (QP-IK)~\cite{Haviland2021NEO}. A single quadratic program is
+        cheaper to solve than an optimisation over a horizon of the same
+        model, which is why these schemes run at control rate on modest
+        hardware; the price is that they optimise only the current
+        instant and therefore cannot trade a worse command now for a
+        feasible one later.
   \item \textbf{Learning-based schemes} replace or augment the planner
-        with a policy learned by (deep) reinforcement learning. They can
-        amortise the online cost of whole-body planning but raise
-        questions of data efficiency, safety, and sim-to-real
-        transfer~\cite{SantAnna2026WBMPReview}.
+        with a policy learned by (deep) reinforcement learning, mapping
+        observations directly to base and arm
+        commands~\cite{Honerkamp2023N2M2,Jauhri2022Reachability}.
+        Learning-based schemes move the cost of whole-body reasoning
+        from run time to training time, but they raise questions of data
+        efficiency, of reproducibility, and of transfer from simulation
+        to hardware~\cite{Iriondo2023DRL,Kang2024DoorOpening}.
 \end{itemize}
 
 \paragraph{Offline versus online.}
-Finally, a planner may operate \emph{offline}---computing a complete
-trajectory before execution---or \emph{online}, re-planning continuously
-as new state estimates and targets arrive. Only online, feedback-driven
-planning provides the disturbance rejection required in a shared,
-changing LMAS workspace. Whole-body \mpc{} sits at the intersection of the
-\emph{whole-body}, \emph{optimization-based}, and \emph{online}
-categories, which is the region of the design space this thesis targets.
+Finally, a planner may operate \emph{offline}, computing a complete
+trajectory before execution, or \emph{online}, re-planning continuously
+as new state estimates and targets arrive. It is the online,
+feedback-driven variant that supplies the disturbance rejection required
+in a shared, changing LMAS workspace, because an offline trajectory
+carries no mechanism for reacting to a scene that has moved since it was
+computed~\cite{Finean2023ContextAware}. Whole-body \mpc{} sits at the
+intersection of the \emph{whole-body}, \emph{optimisation-based}, and
+\emph{online} categories (\cref{fig:sota-taxonomy}), which is the region
+of the design space this thesis targets.
 
 % ---------------------------------------------------------------------
 \section{Overview of Holistic Motion Planners}
 \label{sec:sota-holistic}
 
 \emph{Holistic} (whole-body) planners solve for base and arm motion in a
-single formulation. In practice, the mature, deployable representatives of
-this class are almost exclusively optimization-based, because expressing
-the task in a cost function and the physical restrictions as constraints
-maps naturally onto the coupled, redundant, and constrained nature of the
-mobile-manipulation problem. A systematic review of how such controllers
-are integrated with robotic navigation stacks found that, among the
-open-source projects that couple a navigation stack with a genuine
-whole-body controller, optimal-control formulations---and the \ocs{}
-toolbox in particular---recur as a common backbone, alongside
-operational-space control, quadratic-program solvers, and, more recently,
-learned policies~\cite{SantAnna2026WBMPReview}. The following subsections
+single formulation. The mature, deployable representatives of this class
+are predominantly optimisation-based, because expressing the task as a
+cost and the physical restrictions as constraints maps directly onto the
+coupled, redundant, and constrained nature of the mobile-manipulation
+problem. Among open-source stacks that couple a navigation stack with a
+genuine whole-body controller, three integration mechanisms recur:
+replacing the Nav2 local planner through the
+\texttt{nav2\_core::Controller} plugin interface, wrapping the whole-body
+controller in \texttt{ros2\_control} as
+\texttt{wbc\_ros} does~\cite{wbcros,ros2control}, and bridging the
+navigation stack's velocity and goal topics to a whole-body solver while
+the robot state reaches the solver through the joint-state publisher, as
+in the WoLF stack built on \ocs{}~\cite{wolfsetup}. On the algorithmic
+side the same set of stacks is dominated by two formulations: optimal
+control over a horizon~\cite{Sleiman2021UnifiedMPC,Pankert2020PerceptiveMPC}
+and constraint-based task-space control solved as a quadratic
+program~\cite{Stelter2022OpenSource,Stueben2021ConstraintWBC}.
+
+\Cref{fig:mpc-receding} recalls how the receding-horizon mechanism at
+the core of the first formulation works. The following subsections
 describe \ocs{} and then position the principal alternatives against it.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      ax/.style={-{Latex[length=1.8mm]}, thick},
+    ]
+    % axes
+    \draw[ax] (-0.2,0) -- (10.6,0) node[lbl, below left=1mm] {time};
+    \draw[ax] (0,-0.2) -- (0,3.0);
+    \node[lbl, anchor=east, rotate=90] at (-0.45,1.5) {task-space state};
+
+    % reference
+    \draw[dashed, thick, gray] (0,2.45) -- (8.05,2.45);
+    \node[lbl, anchor=south east] at (8.05,2.5) {reference};
+
+    % --- solve at t_k ------------------------------------------------
+    \draw[thick] (0,0.45) .. controls (1.2,0.55) and (1.9,0.9) .. (2.4,1.25);
+    \draw[thick, dotted] (2.4,1.25) .. controls (3.6,1.95) and (5.2,2.35)
+      .. (6.4,2.42);
+    \draw[decorate, decoration={brace, amplitude=3pt}]
+      (6.4,2.62) -- (2.4,2.62)
+      node[lbl, midway, above=1mm] {prediction horizon $T$ at $t_k$};
+    \node[lbl, anchor=north] at (2.4,-0.15) {$t_k$};
+    \draw[gray, dotted] (2.4,0) -- (2.4,2.55);
+    \draw[gray, dotted] (6.4,0) -- (6.4,2.55);
+    \node[lbl, anchor=north] at (6.4,-0.15) {$t_k+T$};
+
+    % --- solve at t_k+1 ----------------------------------------------
+    \draw[thick] (2.4,1.25) .. controls (2.9,1.5) and (3.3,1.68)
+      .. (3.7,1.80);
+    \draw[thick, dashed] (3.7,1.80) .. controls (5.0,2.20) and (6.5,2.44)
+      .. (7.7,2.44);
+    \node[lbl, anchor=north] at (3.7,-0.15) {$t_{k+1}$};
+    \draw[gray, dotted] (3.7,0) -- (3.7,1.95);
+    \draw[gray, dotted] (7.7,0) -- (7.7,2.5);
+    \node[lbl, anchor=north] at (7.7,-0.15) {$t_{k+1}+T$};
+    \draw[decorate, decoration={brace, amplitude=3pt}]
+      (7.7,1.30) -- (3.7,1.30)
+      node[lbl, midway, below=1mm] {horizon at $t_{k+1}$, shifted};
+
+    % applied segment
+    \draw[{Latex[length=1.6mm]}-{Latex[length=1.6mm]}] (2.4,0.35) -- (3.7,0.35);
+    \node[lbl, anchor=north] at (3.05,0.32) {applied};
+
+    \node[lbl, anchor=north west, text width=28mm] at (8.45,2.30)
+      {solid: executed; dotted and dashed: predicted, then discarded at
+       the next solve};
+  \end{tikzpicture}
+  \caption[Receding-horizon principle of \mpc{}]{%
+    Receding-horizon principle. At $t_k$ the solver optimises the whole
+    trajectory over the horizon $T$ but only the first segment is
+    applied; at $t_{k+1}$ the horizon shifts, the problem is re-solved
+    from the newly measured state, and the remainder of the previous
+    prediction is discarded. Re-solving from the measurement is what
+    turns the plan into feedback~\cite{Rawlings2017MPC}.}
+  \label{fig:mpc-receding}
+\end{figure}
 
 \subsection{The \ocs{} Framework: Optimal-Control-Based Model Predictive
   Control}
 \label{sec:sota-ocs2}
 
 \ocs{} (\emph{Optimal Control for Switched Systems}) is an open-source
-C++ library for numerical optimal control developed at the Robotic
-Systems Lab, ETH Z\"urich~\cite{ocs2Toolbox}. It provides efficient
-solvers for continuous-time optimal-control problems---most notably
-Sequential Linear-Quadratic (SLQ) control, a constrained variant of
-differential dynamic programming (DDP)---together with the supporting
-infrastructure required to run them as an \mpc{} controller.
+library written in C++ for numerical optimal control and developed at
+the Robotic Systems Lab, ETH Z\"urich. It provides solvers for
+continuous-time optimal-control problems, most notably Sequential
+Linear-Quadratic (SLQ) control, a constrained variant of differential
+dynamic programming, together with the infrastructure required to run
+them as an \mpc{} controller; the solver was introduced for quadrupedal
+locomotion and later extended with a feedback policy and with relaxed
+barrier functions for
+constraints~\cite{Farshidian2017SLQ,Grandia2019FeedbackMPC,%
+Feller2017RelaxedBarrier,ocs2Toolbox}.
 
-Three features make \ocs{} well suited to whole-body mobile
-manipulation. First, it derives the cost and constraint derivatives that
-the solver needs by \emph{automatic differentiation}: the user supplies
-the model (kinematics, cost terms, constraints) symbolically, and \ocs{}
-generates and compiles efficient derivative code via CppAD/CppADCodeGen.
-Second, it exposes a \emph{reference manager} that lets the desired
-task-space trajectory be updated online, which is exactly the interface a
-target-generating node needs in order to steer the controller. Third, and
-central to a real-time deployment, \ocs{} separates the optimisation from
-the execution through an MPC--MRT split: the \mpc{} process solves the
-optimal-control problem at its own rate and publishes a \emph{policy},
-while a lightweight Model Reference Tracking (MRT) client evaluates that
-policy at the control rate to produce the instantaneous command. This
-split makes it possible to run the optimiser and the hardware
-interface as separate processes, even on separate machines, a property
-this thesis exploits in the distributed architecture of
+Three properties make \ocs{} suitable for whole-body mobile
+manipulation; \cref{fig:ocs2-structure} shows how they fit together.
+First, the derivatives of cost and constraints that the solver needs are
+obtained by \emph{automatic differentiation}: the model (kinematics,
+cost terms, constraints) is supplied symbolically, and \ocs{} generates
+and compiles the corresponding derivative code through
+CppAD/CppADCodeGen, so that a change of model does not require hand-derived
+Jacobians. Second, a \emph{reference manager} allows the desired
+task-space trajectory to be replaced while the solver is running, which
+is the interface a target-generating node needs in order to steer the
+controller. Third, and decisive for a real-time deployment, \ocs{}
+separates optimisation from execution through an MPC--MRT split: the
+\mpc{} process solves the optimal-control problem at its own rate and
+publishes a \emph{policy}, while a lightweight Model Reference Tracking
+(MRT) client evaluates that policy at the control rate to produce the
+instantaneous command. The split makes it possible to run optimiser and
+hardware interface as separate processes, even on separate machines, a
+property this thesis exploits in the distributed architecture of
 \cref{ch:integration}.
 
-\ocs{} has been demonstrated for whole-body loco-manipulation on legged
-and wheeled platforms, including a unified \mpc{} formulation for combined
-locomotion and manipulation~\cite{Sleiman2021UnifiedMPC} and perceptive
-whole-body interaction with articulated
-objects~\cite{Mittal2022Articulated}. Its lineage also includes
-foundational work on kinematic planning for non-holonomic mobile
-manipulators and whole-body \mpc{} for dynamically stable mobile
-manipulators, which the review in the same project identifies as the core
-mobile-manipulation references behind the
-toolbox~\cite{SantAnna2026WBMPReview}. This track record on hardware, its
-explicit constraint handling, and its process-separable architecture make
-it the primary candidate for the \hero{} platform.
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=3.5pt, minimum height=8.5mm,
+                  minimum width=30mm},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      lbl/.style={font=\scriptsize, align=center},
+      grp/.style={draw, dashed, rounded corners=2pt, inner sep=6pt},
+    ]
+    % --- modelling side (built once, offline) -----------------------
+    \node[box, minimum width=34mm] (model) at (0,1.5)
+      {symbolic model:\\kinematics, cost, constraints};
+    \node[box, minimum width=34mm] (ad)    at (0,0)
+      {CppAD / CppADCodeGen\\generated derivatives};
+    \draw[flow] (model) -- (ad);
+
+    % --- MPC process -------------------------------------------------
+    \node[box] (ref) at (5.4,1.5) {reference manager\\(target trajectory)};
+    \node[box] (slq) at (5.4,0)   {SLQ solver\\(constrained DDP)};
+    \draw[flow] (ad)  -- (slq);
+    \draw[flow] (ref) -- (slq);
+    \node[grp, fit=(slq)(ref)] (gmpc) {};
+    \node[lbl, anchor=south east] at ([xshift=-1mm]gmpc.north west)
+      {\mpc{} process,\\own rate};
+
+    % --- target generator --------------------------------------------
+    \node[box, minimum width=28mm] (tgt) at (5.4,3.3)
+      {target-generating node};
+    \draw[flow] (tgt) -- (ref) node[lbl, midway, right=1mm] {new goal};
+
+    % --- MRT process --------------------------------------------------
+    \node[box] (mrt) at (5.4,-2.5) {MRT client\\policy evaluation};
+    \node[grp, fit=(mrt)] (gmrt) {};
+    \node[lbl, anchor=east, text width=22mm] at ([xshift=-2mm]gmrt.west)
+      {MRT process, control rate};
+
+    \draw[flow] (slq.south) -- (mrt.north)
+      node[lbl, midway, right=1mm] {policy $(K,\svec^\ast,\uvec^\ast)$};
+
+    % --- plant --------------------------------------------------------
+    \node[box] (plant) at (5.4,-4.4) {robot: base and arm};
+    \draw[flow] (mrt) -- (plant) node[lbl, midway, right=1mm] {command};
+
+    % --- measured state, routed on the far right ----------------------
+    \draw[flow] (plant.east) -- ++(1.9,0) |- (slq.east)
+      node[lbl, pos=0.35, right=1mm, align=left] {measured\\state};
+  \end{tikzpicture}
+  \caption[Structure of the \ocs{} framework]{%
+    Structure of \ocs{}. The symbolic model is differentiated
+    automatically and compiled once; the SLQ solver runs in its own
+    process at its own rate and publishes a policy; the MRT client
+    evaluates that policy at control rate and closes the loop on the
+    robot. The reference manager lets the task-space target be replaced
+    without restarting the solver.}
+  \label{fig:ocs2-structure}
+\end{figure}
+
+\ocs{} has been used for whole-body mobile manipulation across several
+platforms. The kinematic planner of Giftthaler et~al.\ addresses exactly
+the non-holonomic base considered here~\cite{Giftthaler2017Kinematic};
+Minniti et~al.\ demonstrate whole-body \mpc{} on a dynamically stable
+mobile manipulator~\cite{Minniti2019WholeBodyMPC} and extend it to
+force-controlled interaction with the
+environment~\cite{Minniti2021Interaction}; Pankert and Hutter run
+continuous mobile manipulation from onboard
+perception~\cite{Pankert2020PerceptiveMPC}; Sleiman et~al.\ unify
+locomotion and manipulation in one \mpc{}
+formulation~\cite{Sleiman2021UnifiedMPC}; and Mittal et~al.\ apply the
+same toolbox to articulated objects in unknown
+scenes~\cite{Mittal2022Articulated}. This record covers R1 to R4 of
+\cref{tab:requirements} on hardware of comparable complexity, and the
+process-separable architecture speaks to R5, which is why \ocs{} is
+carried forward as the leading candidate for \hero{}.
 
 \subsection{Alternative Frameworks and Methods}
 \label{sec:sota-alternatives}
 
-Several alternatives to \ocs{} exist, spanning the algorithmic families of
-\cref{sec:sota-classification}.
+Several alternatives to \ocs{} exist, spanning the algorithmic
+categories of \cref{sec:sota-classification}.
 
 \paragraph{Sampling-based planning (MoveIt).}
 MoveIt~\cite{moveit2} is the de-facto standard motion-planning framework
-in the ROS ecosystem. Its strength is offline, collision-free planning
-for redundant arms in cluttered scenes; it can be extended to a mobile
-base by treating the base pose as additional planning variables. In its
-common usage, however, MoveIt underpins the \emph{decoupled}
-navigate-then-manipulate pipeline and does not, by itself, provide the
-online, coordinated base--arm feedback that whole-body \mpc{} offers. It
-is therefore the natural baseline against which a whole-body approach is
-compared rather than a competing whole-body planner.
+in the ROS ecosystem, exposing the OMPL sampling-based
+planners~\cite{Sucan2012OMPL}. Its strength is collision-free planning
+for redundant arms in cluttered scenes, computed before execution; it
+can in principle be extended to a mobile base by treating the base pose
+as additional planning variables. In its open-source form, however,
+MoveIt underpins the \emph{decoupled} navigate-then-manipulate pipeline
+and provides no online, coordinated base--arm feedback of the kind R1
+and R4 ask for. Whole-body capabilities for mobile manipulators are
+offered by the commercial MoveIt Pro platform, which is not open source
+and therefore does not satisfy R7~\cite{moveitpro}. MoveIt is
+consequently the incumbent pipeline from which this work departs rather
+than a competing whole-body planner; a quantitative comparison of the
+two pipelines requires a second, decoupled implementation on the same
+platform and is left to future work (\cref{ch:conclusion}).
 
-\paragraph{Other optimization-based / \mpc{} tools.}
-Beyond \ocs{}, whole-body behaviour can be realised with general-purpose
-optimal-control and \mpc{} solvers or with constraint-based task-space
-controllers. The project-internal review catalogues open-source stacks
-that integrate such controllers with a navigation stack through different
-mechanisms---replacing the Nav2 local planner via the
-\texttt{nav2\_core::Controller} plugin interface, wrapping the controller
-in \texttt{ros2\_control}, or bridging \texttt{cmd\_vel}/goal topics to a
-whole-body solver---and reports that \ocs{}-based and quadratic-program
-solvers dominate this category~\cite{SantAnna2026WBMPReview}. These tools
-are technically capable but generally require more integration effort or
-offer less mature support for the specific combination of a
-differential-drive base and a ROS~2 hardware stack targeted here.
+\paragraph{Other optimisation-based and \mpc{} tools.}
+Beyond \ocs{}, whole-body behaviour can be realised with constraint-based
+task-space controllers driven by a solver over a short horizon. Stelter
+et~al.\ publish an open-source framework for mobile manipulators that
+casts the task-space constraints as a linear \mpc{}
+problem~\cite{Stelter2022OpenSource}, and Stueben et~al.\ apply
+constraint-based whole-body control to mobile manipulators in
+human-centred environments~\cite{Stueben2021ConstraintWBC}. The
+\texttt{wbc\_ros} package wraps a quadratic-program whole-body controller
+in \texttt{ros2\_control}~\cite{wbcros}. These tools satisfy R1 and R2
+but either target a different base morphology or expose a shorter
+effective horizon than a full optimal-control formulation, and the
+integration effort for a differential-drive base under ROS~2 is
+comparable to the one reported here.
 
 \paragraph{Reactive quadratic-program inverse kinematics.}
 QP-based inverse kinematics resolves the \ee{} task and secondary
-objectives (joint-limit avoidance, manipulability) into joint velocities
-at each control step. It is computationally light and reactive but, being
-a one-step method, cannot anticipate constraints over a horizon, which
-limits its ability to plan coordinated base--arm motion for long,
-reach-exceeding paths.
+objectives---joint-limit avoidance, manipulability---into joint
+velocities at each control step, and extends naturally to base and arm
+together~\cite{Haviland2021NEO,Haviland2022Holistic}. Burgess-Limerick
+et~al.\ show that this class of controller supports manipulation while
+the base is moving~\cite{BurgessLimerick2024ReactiveBase}, so it meets
+R1, R3, and R4. Because it optimises a single step, however, it cannot
+anticipate a constraint that will become active later in the motion,
+which is what R2 asks for over a horizon.
 
 \paragraph{Learning-based whole-body control.}
-A growing body of work hybridises classical navigation with reinforcement
-learning to amortise the online cost of whole-body planning, learning
-policies that map observations directly to base and arm
-commands~\cite{SantAnna2026WBMPReview}. While promising, these approaches
-introduce training-data, reproducibility, and sim-to-real-transfer
-concerns that are not aligned with the goal of this thesis---deploying a
-transparent, analysable controller on real hardware in the near term.
+A growing body of work hybridises classical navigation with
+reinforcement learning, training policies that map observations directly
+to base and arm commands. Honerkamp et~al.\ learn a navigation policy
+that supports arbitrary mobile-manipulation motions in unseen
+environments~\cite{Honerkamp2023N2M2}; Jauhri et~al.\ shape exploration
+with reachability priors~\cite{Jauhri2022Reachability}; Iriondo
+et~al.\ learn base-positioning policies for manipulation
+operations~\cite{Iriondo2023DRL}; and Kang et~al.\ combine a learned
+policy with adaptive position-force control for door
+opening~\cite{Kang2024DoorOpening}. These approaches satisfy R1 and R4
+and are cheap at run time, but the training data, the reproducibility of
+the resulting policy, and the transfer from simulation to hardware
+conflict with R7 and with the near-term, hardware-first goal of this
+work.
 
 % ---------------------------------------------------------------------
 \section{Comparison of Motion Planning Algorithms and Selection of a
   Suitable Algorithm}
 \label{sec:sota-selection}
 
-The choice of a planner for \hero{} is driven by the requirements
-identified in \cref{ch:introduction}: coordinated whole-body motion,
-explicit handling of joint/velocity, non-holonomic, and self-collision
-constraints, online reactivity, real-time feasibility on modest on-board
-compute, and good ROS~2 support so that the controller can be integrated
-with the existing hardware stack. \Cref{tab:sota-comparison} summarises
-how the candidate approaches score against these criteria.
+The choice of a planner for \hero{} follows the requirements R1 to R7
+stated in \cref{tab:requirements}: coordinated whole-body motion,
+explicit handling of joint, velocity, non-holonomic and self-collision
+constraints, deliberate redundancy resolution, online re-planning from
+the measured state, real-time feasibility on the on-board computer,
+ROS~2 interfaces, and a controller whose behaviour can be analysed on
+hardware. \Cref{tab:sota-comparison} scores the four candidate families
+against those criteria. The scores are judgements, not measurements:
+each one is read off the published evidence cited in
+\cref{sec:sota-holistic,sec:sota-alternatives} for that family, and no
+row rests on a trial run of the alternatives on \hero{}. Only the
+\ocs{} column is later confirmed by measurement, in
+\cref{ch:hardware}.
 
 \begin{table}[htbp]
   \centering
   \caption[Comparison of motion-planning approaches for \hero{}]{%
     Qualitative comparison of motion-planning approaches against the
-    requirements of the \hero{} platform
-    ($+$ good, $\circ$ partial, $-$ weak).}
+    requirements of \cref{tab:requirements}
+    ($+$ good, $\circ$ partial, $-$ weak). Scores follow the evidence
+    cited per family in \cref{sec:sota-holistic,sec:sota-alternatives}.}
   \label{tab:sota-comparison}
-  \begin{tabularx}{\linewidth}{@{}Xcccc@{}}
+  \begin{tabularx}{\linewidth}{@{}llcccc@{}}
     \toprule
-    Criterion
+    & Criterion
       & \shortstack{Sampling\\(MoveIt)}
       & \shortstack{QP-IK\\(reactive)}
       & \shortstack{Learning\\(RL)}
       & \shortstack{Whole-body\\\mpc{} (\ocs{})} \\
     \midrule
-    Coordinated whole-body motion & $\circ$ & $\circ$ & $+$      & $+$      \\
-    Explicit constraint handling  & $\circ$ & $\circ$ & $-$      & $+$      \\
-    Online reactivity             & $-$     & $+$     & $+$      & $+$      \\
-    Real-time feasibility         & $\circ$ & $+$     & $+$      & $\circ$  \\
-    Redundancy resolution         & $\circ$ & $+$     & $+$      & $+$      \\
-    ROS~2 maturity                & $+$     & $\circ$ & $-$      & $+$      \\
-    Transparency / analysability  & $+$     & $+$     & $-$      & $+$      \\
+    R1 & Coordinated whole-body motion & $\circ$ & $+$     & $+$ & $+$     \\
+    R2 & Explicit constraint handling  & $\circ$ & $\circ$ & $-$ & $+$     \\
+    R3 & Redundancy resolution         & $\circ$ & $+$     & $+$ & $+$     \\
+    R4 & Online re-planning            & $-$     & $+$     & $+$ & $+$     \\
+    R5 & Real-time feasibility         & $\circ$ & $+$     & $+$ & $\circ$ \\
+    R6 & ROS~2 interfaces              & $+$     & $\circ$ & $-$ & $+$     \\
+    R7 & Transparency / analysability  & $+$     & $+$     & $-$ & $+$     \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-Sampling-based planning is mature and well supported but is offline and,
-in its standard form, decoupled---disqualifying it as the primary
-whole-body planner while keeping it relevant as a baseline. Reactive
-QP-IK is fast and reactive but myopic. Learning-based control is
-attractive in principle but conflicts with the near-term, hardware-first,
-and analysability goals of this work. Whole-body \mpc{} is the only family
-that simultaneously delivers coordinated base--arm motion, explicit
-constraint handling, and online reactivity; its main drawback, the
-computational burden of solving an optimal-control problem online, is
-addressable through the MPC--MRT split and a distributed deployment
-(\cref{ch:integration}) and is quantified experimentally in
+Sampling-based planning is mature and well supported but computes its
+trajectory before execution and, in its standard form, keeps base and
+arm separate, which disqualifies it as the primary whole-body planner
+while keeping it relevant as the incumbent alternative. Reactive QP-IK
+meets every requirement except the horizon in R2. Learning-based control
+is attractive in principle but conflicts with R7 and with the near-term,
+hardware-first goals of this work. Whole-body \mpc{} is the only family
+that satisfies R1 to R4 simultaneously; its weak point is R5, the
+computational burden of solving an optimal-control problem online, which
+is addressed through the MPC--MRT split and a distributed deployment
+(\cref{ch:integration}) and quantified experimentally in
 \cref{ch:hardware}.
 
-Among whole-body \mpc{} implementations, \ocs{} is selected for its mature
+Among whole-body \mpc{} implementations, \ocs{} is selected for its
 open-source implementation, its explicit constraint support, its
-demonstrated use on wheeled and legged mobile manipulators, and, decisive
-for a real-time deployment on distributed hardware, its process-separable
-MPC--MRT architecture. The remainder of this thesis therefore integrates
-and validates \ocs{}-based whole-body \mpc{} on the \hero{} platform.
+demonstrated use on wheeled and legged mobile manipulators
+(\cref{sec:sota-ocs2}), and, decisive for a real-time deployment on
+distributed hardware, its process-separable MPC--MRT architecture. The
+remainder of this thesis therefore integrates and validates \ocs{}-based
+whole-body \mpc{} on the \hero{} platform.

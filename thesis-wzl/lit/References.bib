@@ -1,210 +1,558 @@
 % =====================================================================
-%  references.bib
+%  References.bib -- published literature (peer-reviewed papers, books)
 % ---------------------------------------------------------------------
-%  IMPORTANT -- verify EVERY entry before submission.
-%  Entries marked "% VERIFY" contain details (authors, venue, year,
-%  pages) reconstructed from memory and MUST be checked against the
-%  original source. Do not submit unverified citations.
+%  Every entry here was checked against Crossref (api.crossref.org) on
+%  2026-09-10: authors, title, venue, volume, issue, pages, year and DOI
+%  come from the publisher's own metadata record. Google Scholar BibTeX
+%  is not an acceptable source for these fields.
+%
+%  Entries that Zotero cannot represent faithfully -- source repositories,
+%  vendor documentation, standards, operating manuals, internal reports --
+%  live in sources-manual.bib and are maintained by hand. See lit/README.md
+%  before pointing an automated exporter at this file.
 % =====================================================================
 
 % ---------------------------------------------------------------------
-%  Line-less Mobile Assembly Systems (WZL / RWTH Aachen)
+%  Manufacturing systems: flexibility, reconfigurability, line-less assembly
 % ---------------------------------------------------------------------
-% VERIFY: exact authors, journal, volume, pages, year.
+
+@article{ElMaraghy2013Variety,
+  author  = {ElMaraghy, Hoda and Schuh, G{\"u}nther and ElMaraghy, Waguih and
+             Piller, Frank and Sch{\"o}nsleben, Paul and Tseng, Mitchell and
+             Bernard, Alain},
+  title   = {Product Variety Management},
+  journal = {CIRP Annals},
+  volume  = {62},
+  number  = {2},
+  pages   = {629--652},
+  year    = {2013},
+  doi     = {10.1016/j.cirp.2013.05.007}
+}
+
+@article{Koren1999RMS,
+  author  = {Koren, Yoram and Heisel, Uwe and Jovane, Francesco and
+             Moriwaki, Toshimichi and Pritschow, G{\"u}nter and
+             Ulsoy, Galip and Van Brussel, Hendrik},
+  title   = {Reconfigurable Manufacturing Systems},
+  journal = {CIRP Annals},
+  volume  = {48},
+  number  = {2},
+  pages   = {527--540},
+  year    = {1999},
+  doi     = {10.1016/S0007-8506(07)63232-6}
+}
+
+@article{ElMaraghy2005FRMS,
+  author  = {ElMaraghy, Hoda A.},
+  title   = {Flexible and Reconfigurable Manufacturing Systems Paradigms},
+  journal = {International Journal of Flexible Manufacturing Systems},
+  volume  = {17},
+  number  = {4},
+  pages   = {261--276},
+  year    = {2005},
+  doi     = {10.1007/s10696-006-9028-7}
+}
+
+% Crossref records this author as "Huettemann"; normalised to the correct
+% German spelling here so the same person does not appear as both [HUET16]
+% and [HUETT19] in the reference list.
 @article{Huettemann2016LMAS,
   author  = {H{\"u}ttemann, Guido and Gaffry, Christian and Schmitt, Robert H.},
   title   = {Adaptation of Reconfigurable Manufacturing Systems for
              Industrial Assembly -- Review of Flexibility Paradigms,
              Concepts, and Outlook},
   journal = {Procedia CIRP},
+  volume  = {52},
+  pages   = {112--117},
   year    = {2016},
-  note    = {VERIFY details}
+  doi     = {10.1016/j.procir.2016.07.021}
 }
 
-% VERIFY: exact authors, venue, year, pages.
+@article{Huettemann2019LMAS,
+  author  = {H{\"u}ttemann, Guido and Buckhorst, Armin F. and
+             Schmitt, Robert H.},
+  title   = {Modelling and Assessing Line-less Mobile Assembly Systems},
+  journal = {Procedia CIRP},
+  volume  = {81},
+  pages   = {724--729},
+  year    = {2019},
+  doi     = {10.1016/j.procir.2019.03.184}
+}
+
 @article{Buckhorst2022LMAS,
   author  = {Buckhorst, Armin F. and Grahn, Lea and Schmitt, Robert H.},
-  title   = {Holistic Production Control for Line-less Mobile Assembly Systems},
+  title   = {Decentralized Holonic Control System Model for Line-less
+             Mobile Assembly Systems},
   journal = {Robotics and Computer-Integrated Manufacturing},
+  volume  = {75},
+  pages   = {102301},
   year    = {2022},
-  note    = {VERIFY details}
+  doi     = {10.1016/j.rcim.2021.102301}
 }
 
-% VERIFY: this is a placeholder for the foundational LMAS definition paper.
-@inproceedings{Kern2019LMAS,
-  author    = {Kern, Wolfgang and Rusitschka, Fabian and Kopp, Wolfgang and
-               Bauernhansl, Thomas},
-  title     = {Alternatives to Assembly Line Production in the Automotive
-               Industry},
-  booktitle = {Proceedings of the International Conference on Production Research},
+@incollection{Buckhorst2019Planning,
+  author    = {Buckhorst, Armin F. and H{\"u}ttemann, Guido and Grahn, Lea and
+               Schmitt, Robert H.},
+  title     = {Assignment, Sequencing and Location Planning in Line-less
+               Mobile Assembly Systems},
+  booktitle = {Tagungsband des 4. Kongresses Montage Handhabung
+               Industrieroboter},
+  pages     = {227--238},
+  publisher = {Springer Berlin Heidelberg},
   year      = {2019},
-  note      = {VERIFY details}
+  doi       = {10.1007/978-3-662-59317-2_23}
+}
+
+@article{Bergs2024EdgeComputing,
+  author  = {Bergs, Lukas and Tr{\'e}heux, Guillaume and Sch{\"a}per, Lukas and
+             Pinheiro de Souza, Lucas Manass{\'e}s and M{\"u}nker, S{\"o}ren and
+             G{\"o}ppert, Amon and Schmitt, Robert H.},
+  title   = {Edge Computing Framework for Enhanced Robotic Adaptivity in
+             Line-Less Mobile Assembly Systems},
+  journal = {Procedia CIRP},
+  volume  = {127},
+  pages   = {26--31},
+  year    = {2024},
+  doi     = {10.1016/j.procir.2024.07.006}
+}
+
+@article{Kern2016Modular,
+  author  = {Kern, Wolfgang and Rusitschka, Fabian and Bauernhansl, Thomas},
+  title   = {Planning of Workstations in a Modular Automotive Assembly
+             System},
+  journal = {Procedia CIRP},
+  volume  = {57},
+  pages   = {327--332},
+  year    = {2016},
+  doi     = {10.1016/j.procir.2016.11.057}
 }
 
 % ---------------------------------------------------------------------
-%  Mobile manipulation / motion planning
+%  Robotics fundamentals: kinematics, redundancy, mobile-manipulation surveys
 % ---------------------------------------------------------------------
-% VERIFY: journal name, volume, pages.
+
+@book{Lynch2017ModernRobotics,
+  author    = {Lynch, Kevin M. and Park, Frank C.},
+  title     = {Modern Robotics: Mechanics, Planning, and Control},
+  publisher = {Cambridge University Press},
+  year      = {2017},
+  doi       = {10.1017/9781316661239}
+}
+
+@book{Siciliano2009Robotics,
+  author    = {Siciliano, Bruno and Sciavicco, Lorenzo and Villani, Luigi and
+               Oriolo, Giuseppe},
+  title     = {Robotics: Modelling, Planning and Control},
+  series    = {Advanced Textbooks in Control and Signal Processing},
+  publisher = {Springer London},
+  year      = {2009},
+  doi       = {10.1007/978-1-84628-642-1}
+}
+
+@article{Yoshikawa1985Manipulability,
+  author  = {Yoshikawa, Tsuneo},
+  title   = {Manipulability of Robotic Mechanisms},
+  journal = {The International Journal of Robotics Research},
+  volume  = {4},
+  number  = {2},
+  pages   = {3--9},
+  year    = {1985},
+  doi     = {10.1177/027836498500400201}
+}
+
+@article{Dietrich2015NullSpace,
+  author  = {Dietrich, Alexander and Ott, Christian and
+             Albu-Sch{\"a}ffer, Alin},
+  title   = {An Overview of Null Space Projections for Redundant,
+             Torque-Controlled Robots},
+  journal = {The International Journal of Robotics Research},
+  volume  = {34},
+  number  = {11},
+  pages   = {1385--1400},
+  year    = {2015},
+  doi     = {10.1177/0278364914566516}
+}
+
 @article{Sandakalum2022Survey,
-  author  = {Sandakalum, Thushara and Ang Jr., Marcelo H.},
+  author  = {Sandakalum, Thushara and Ang, Marcelo H.},
   title   = {Motion Planning for Mobile Manipulators---A Systematic Review},
-  journal = {Applied Sciences},
+  journal = {Machines},
+  volume  = {10},
+  number  = {2},
+  pages   = {97},
   year    = {2022},
-  volume  = {12},
-  number  = {21},
-  note    = {VERIFY details}
+  doi     = {10.3390/machines10020097}
 }
 
-% VERIFY: exact title/venue.
 @article{Thakar2023MobileManip,
-  author  = {Thakar, Shantanu and Srinivasan, Sarah and Al-Hussaini, Sarah and
-             others},
+  author  = {Thakar, Shantanu and Srinivasan, Srivatsan and
+             Al-Hussaini, Sarah and Bhatt, Prahar M. and
+             Rajendran, Pradeep and Yoon, Yeo Jung and Dhanaraj, Neel and
+             Malhan, Rishi K.},
   title   = {A Survey of Wheeled Mobile Manipulation: A Decision-Making
              Perspective},
   journal = {Journal of Mechanisms and Robotics},
+  volume  = {15},
+  number  = {2},
   year    = {2023},
-  note    = {VERIFY details}
+  doi     = {10.1115/1.4054611}
+}
+
+% ---------------------------------------------------------------------
+%  Sampling-based and reactive motion planning
+% ---------------------------------------------------------------------
+
+@article{Kavraki1996PRM,
+  author  = {Kavraki, Lydia E. and {\v S}vestka, Petr and
+             Latombe, Jean-Claude and Overmars, Mark H.},
+  title   = {Probabilistic Roadmaps for Path Planning in High-Dimensional
+             Configuration Spaces},
+  journal = {IEEE Transactions on Robotics and Automation},
+  volume  = {12},
+  number  = {4},
+  pages   = {566--580},
+  year    = {1996},
+  doi     = {10.1109/70.508439}
+}
+
+@article{LaValle2001RRT,
+  author  = {LaValle, Steven M. and Kuffner, James J.},
+  title   = {Randomized Kinodynamic Planning},
+  journal = {The International Journal of Robotics Research},
+  volume  = {20},
+  number  = {5},
+  pages   = {378--400},
+  year    = {2001},
+  doi     = {10.1177/02783640122067453}
+}
+
+@book{LaValle2006Planning,
+  author    = {LaValle, Steven M.},
+  title     = {Planning Algorithms},
+  publisher = {Cambridge University Press},
+  year      = {2006},
+  doi       = {10.1017/CBO9780511546877}
+}
+
+@article{Sucan2012OMPL,
+  author  = {{\c S}ucan, Ioan A. and Moll, Mark and Kavraki, Lydia E.},
+  title   = {The Open Motion Planning Library},
+  journal = {IEEE Robotics \& Automation Magazine},
+  volume  = {19},
+  number  = {4},
+  pages   = {72--82},
+  year    = {2012},
+  doi     = {10.1109/MRA.2012.2205651}
+}
+
+@article{Khatib1986PotentialFields,
+  author  = {Khatib, Oussama},
+  title   = {Real-Time Obstacle Avoidance for Manipulators and Mobile
+             Robots},
+  journal = {The International Journal of Robotics Research},
+  volume  = {5},
+  number  = {1},
+  pages   = {90--98},
+  year    = {1986},
+  doi     = {10.1177/027836498600500106}
+}
+
+@article{Haviland2021NEO,
+  author  = {Haviland, Jesse and Corke, Peter},
+  title   = {{NEO}: A Novel Expeditious Optimisation Algorithm for Reactive
+             Motion Control of Manipulators},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {6},
+  number  = {2},
+  pages   = {1043--1050},
+  year    = {2021},
+  doi     = {10.1109/LRA.2021.3056060}
+}
+
+@article{Haviland2022Holistic,
+  author  = {Haviland, Jesse and S{\"u}nderhauf, Niko and Corke, Peter},
+  title   = {A Holistic Approach to Reactive Mobile Manipulation},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {7},
+  number  = {2},
+  pages   = {3122--3129},
+  year    = {2022},
+  doi     = {10.1109/LRA.2022.3146554}
+}
+
+@article{BurgessLimerick2024ReactiveBase,
+  author  = {Burgess-Limerick, Ben and Haviland, Jesse and Lehnert, Chris and
+             Corke, Peter},
+  title   = {Reactive Base Control for On-the-Move Mobile Manipulation in
+             Dynamic Environments},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {9},
+  number  = {3},
+  pages   = {2048--2055},
+  year    = {2024},
+  doi     = {10.1109/LRA.2024.3354615}
 }
 
 % ---------------------------------------------------------------------
 %  Model Predictive Control / optimal control
 % ---------------------------------------------------------------------
+
 @book{Rawlings2017MPC,
   author    = {Rawlings, James B. and Mayne, David Q. and Diehl, Moritz M.},
   title     = {Model Predictive Control: Theory, Computation, and Design},
   edition   = {2},
   publisher = {Nob Hill Publishing},
+  address   = {Madison, WI},
   year      = {2017}
 }
 
-% ---------------------------------------------------------------------
-%  OCS2 and OCS2-based whole-body MPC
-% ---------------------------------------------------------------------
-@misc{ocs2Toolbox,
-  author       = {Farshidian, Farbod and {others}},
-  title        = {{OCS2}: An Open Source Library for Optimal Control of
-                  Switched Systems},
-  howpublished = {\url{https://github.com/leggedrobotics/ocs2}},
-  year         = {2017},
-  note         = {Accessed: \today}
+@article{Mayne2000Constrained,
+  author  = {Mayne, David Q. and Rawlings, James B. and Rao, Christopher V.
+             and Scokaert, Pierre O. M.},
+  title   = {Constrained Model Predictive Control: Stability and Optimality},
+  journal = {Automatica},
+  volume  = {36},
+  number  = {6},
+  pages   = {789--814},
+  year    = {2000},
+  doi     = {10.1016/S0005-1098(99)00214-9}
 }
 
-% VERIFY: volume/issue/pages of the RA-L article.
+@article{Feller2017RelaxedBarrier,
+  author  = {Feller, Christian and Ebenbauer, Christian},
+  title   = {Relaxed Logarithmic Barrier Function Based Model Predictive
+             Control of Linear Systems},
+  journal = {IEEE Transactions on Automatic Control},
+  volume  = {62},
+  number  = {3},
+  pages   = {1223--1238},
+  year    = {2017},
+  doi     = {10.1109/TAC.2016.2582040}
+}
+
+% ---------------------------------------------------------------------
+%  OCS2: solver lineage and mobile-manipulation applications
+% ---------------------------------------------------------------------
+
+@inproceedings{Farshidian2017SLQ,
+  author    = {Farshidian, Farbod and Neunert, Michael and
+               Winkler, Alexander W. and Rey, Gonzalo and Buchli, Jonas},
+  title     = {An Efficient Optimal Planning and Control Framework for
+               Quadrupedal Locomotion},
+  booktitle = {2017 IEEE International Conference on Robotics and
+               Automation (ICRA)},
+  pages     = {93--100},
+  publisher = {IEEE},
+  year      = {2017},
+  doi       = {10.1109/ICRA.2017.7989016}
+}
+
+@inproceedings{Giftthaler2017Kinematic,
+  author    = {Giftthaler, Markus and Farshidian, Farbod and Sandy, Timothy
+               and Stadelmann, Lukas and Buchli, Jonas},
+  title     = {Efficient Kinematic Planning for Mobile Manipulators with
+               Non-Holonomic Constraints Using Optimal Control},
+  booktitle = {2017 IEEE International Conference on Robotics and
+               Automation (ICRA)},
+  pages     = {3411--3417},
+  publisher = {IEEE},
+  year      = {2017},
+  doi       = {10.1109/ICRA.2017.7989388}
+}
+
+@inproceedings{Grandia2019FeedbackMPC,
+  author    = {Grandia, Ruben and Farshidian, Farbod and Ranftl, Ren{\'e} and
+               Hutter, Marco},
+  title     = {Feedback {MPC} for Torque-Controlled Legged Robots},
+  booktitle = {2019 IEEE/RSJ International Conference on Intelligent Robots
+               and Systems (IROS)},
+  pages     = {4730--4737},
+  publisher = {IEEE},
+  year      = {2019},
+  doi       = {10.1109/IROS40897.2019.8968251}
+}
+
+@article{Minniti2019WholeBodyMPC,
+  author  = {Minniti, Maria Vittoria and Farshidian, Farbod and
+             Grandia, Ruben and Hutter, Marco},
+  title   = {Whole-Body {MPC} for a Dynamically Stable Mobile Manipulator},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {4},
+  number  = {4},
+  pages   = {3687--3694},
+  year    = {2019},
+  doi     = {10.1109/LRA.2019.2927955}
+}
+
+@article{Pankert2020PerceptiveMPC,
+  author  = {Pankert, Johannes and Hutter, Marco},
+  title   = {Perceptive Model Predictive Control for Continuous Mobile
+             Manipulation},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {5},
+  number  = {4},
+  pages   = {6177--6184},
+  year    = {2020},
+  doi     = {10.1109/LRA.2020.3010721}
+}
+
+@inproceedings{Minniti2021Interaction,
+  author    = {Minniti, Maria Vittoria and Grandia, Ruben and F{\"a}h, Kevin
+               and Farshidian, Farbod and Hutter, Marco},
+  title     = {Model Predictive Robot-Environment Interaction Control for
+               Mobile Manipulation Tasks},
+  booktitle = {2021 IEEE International Conference on Robotics and
+               Automation (ICRA)},
+  pages     = {1651--1657},
+  publisher = {IEEE},
+  year      = {2021},
+  doi       = {10.1109/ICRA48506.2021.9562066}
+}
+
 @article{Sleiman2021UnifiedMPC,
   author  = {Sleiman, Jean-Pierre and Farshidian, Farbod and
              Minniti, Maria Vittoria and Hutter, Marco},
   title   = {A Unified {MPC} Framework for Whole-Body Dynamic Locomotion
              and Manipulation},
   journal = {IEEE Robotics and Automation Letters},
-  year    = {2021},
   volume  = {6},
   number  = {3},
-  note    = {VERIFY details}
+  pages   = {4688--4695},
+  year    = {2021},
+  doi     = {10.1109/LRA.2021.3068908}
 }
 
-% VERIFY: exact venue/year (perceptive whole-body loco-manipulation).
 @inproceedings{Mittal2022Articulated,
-  author    = {Mittal, Mayank and Rudin, Nikita and Klemm, Victor and
-               Allshire, Arthur and Hutter, Marco},
+  author    = {Mittal, Mayank and Hoeller, David and Farshidian, Farbod and
+               Hutter, Marco and Garg, Animesh},
   title     = {Articulated Object Interaction in Unknown Scenes with
                Whole-Body Mobile Manipulation},
-  booktitle = {IEEE/RSJ International Conference on Intelligent Robots and
-               Systems (IROS)},
+  booktitle = {2022 IEEE/RSJ International Conference on Intelligent Robots
+               and Systems (IROS)},
+  pages     = {1647--1654},
+  publisher = {IEEE},
   year      = {2022},
-  note      = {VERIFY details}
+  doi       = {10.1109/IROS47612.2022.9981779}
 }
 
 % ---------------------------------------------------------------------
-%  Software / middleware / platform
+%  Whole-body control integrated with navigation stacks
 % ---------------------------------------------------------------------
-@misc{ROS2,
-  author       = {{Open Robotics}},
-  title        = {{ROS~2} Documentation: Jazzy Jalisco},
-  howpublished = {\url{https://docs.ros.org/en/jazzy/}},
-  year         = {2024},
-  note         = {Accessed: \today}
+
+@inproceedings{Stelter2022OpenSource,
+  author    = {Stelter, Simon and Bartels, Georg and Beetz, Michael},
+  title     = {An Open-Source Motion Planning Framework for Mobile
+               Manipulators Using Constraint-Based Task Space Control with
+               Linear {MPC}},
+  booktitle = {2022 IEEE/RSJ International Conference on Intelligent Robots
+               and Systems (IROS)},
+  pages     = {1671--1678},
+  publisher = {IEEE},
+  year      = {2022},
+  doi       = {10.1109/IROS47612.2022.9982245}
 }
 
-@misc{ros2control,
-  author       = {{ros2\_control Development Team}},
-  title        = {{ros2\_control}: Flexible Framework for Real-Time Control},
-  howpublished = {\url{https://control.ros.org}},
-  year         = {2024},
-  note         = {Accessed: \today}
+@inproceedings{Stueben2021ConstraintWBC,
+  author    = {Stueben, Matthias and Hoffmann, Alwin and Reif, Wolfgang},
+  title     = {Constraint-Based Whole-Body-Control of Mobile Manipulators in
+               Human-Centered Environments},
+  booktitle = {2021 26th IEEE International Conference on Emerging
+               Technologies and Factory Automation (ETFA)},
+  pages     = {1--8},
+  publisher = {IEEE},
+  year      = {2021},
+  doi       = {10.1109/ETFA45728.2021.9613281}
 }
 
-@misc{moveit2,
-  author       = {{PickNik Robotics}},
-  title        = {{MoveIt~2}: Motion Planning Framework for {ROS~2}},
-  howpublished = {\url{https://moveit.ai}},
-  year         = {2024},
-  note         = {Accessed: \today}
+@article{Finean2023ContextAware,
+  author  = {Finean, Mark Nicholas and Petrovi{\'c}, Luka and
+             Merkt, Wolfgang and Markovi{\'c}, Ivan and Havoutis, Ioannis},
+  title   = {Motion Planning in Dynamic Environments Using Context-Aware
+             Human Trajectory Prediction},
+  journal = {Robotics and Autonomous Systems},
+  volume  = {166},
+  pages   = {104450},
+  year    = {2023},
+  doi     = {10.1016/j.robot.2023.104450}
 }
 
-@misc{zenoh,
-  author       = {{ZettaScale Technology}},
-  title        = {{Zenoh}: Zero Overhead Network Protocol},
-  howpublished = {\url{https://zenoh.io}},
-  year         = {2024},
-  note         = {Accessed: \today}
+% ---------------------------------------------------------------------
+%  Learning-based whole-body / mobile manipulation
+% ---------------------------------------------------------------------
+
+@article{Honerkamp2023N2M2,
+  author  = {Honerkamp, Daniel and Welschehold, Tim and Valada, Abhinav},
+  title   = {{N$^{2}$M$^{2}$}: Learning Navigation for Arbitrary Mobile
+             Manipulation Motions in Unseen and Dynamic Environments},
+  journal = {IEEE Transactions on Robotics},
+  volume  = {39},
+  number  = {5},
+  pages   = {3601--3619},
+  year    = {2023},
+  doi     = {10.1109/TRO.2023.3284346}
 }
 
-% VERIFY: cite sheet / model number for the exact UR10e used.
-@misc{UR10e,
-  author       = {{Universal Robots}},
-  title        = {{UR10e} Collaborative Industrial Robot Arm},
-  howpublished = {\url{https://www.universal-robots.com}},
-  year         = {2024},
-  note         = {Accessed: \today; VERIFY payload/reach specs}
+@article{Jauhri2022Reachability,
+  author  = {Jauhri, Snehal and Peters, Jan and Chalvatzaki, Georgia},
+  title   = {Robot Learning of Mobile Manipulation with Reachability
+             Behavior Priors},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {7},
+  number  = {3},
+  pages   = {8399--8406},
+  year    = {2022},
+  doi     = {10.1109/LRA.2022.3188109}
 }
 
-% HERo differential-drive base = HENKEL + ROTH "freeMoVe" (HR-Projekt 569,
-% model 569-01). Confirmed via the operating manuals in materials/ (device
-% password 569mr30 matches docs/devices.md IPC credentials).
-@manual{HenkelRoth2019freeMoVe,
-  author       = {{HENKEL + ROTH GmbH}},
-  title        = {Betriebsanleitung HR-Projekt 569 -- Mobiler Roboter
-                  ``freeMoVe'' (569-01 Mobiler Roboter)},
-  organization = {HENKEL + ROTH GmbH},
-  address      = {Ilmenau, Germany},
-  edition      = {V01},
-  year         = {2019},
-  note         = {Original operating manual, 04.12.2019; internal
-                  documentation of the \hero{} mobile base}
+@article{Iriondo2023DRL,
+  author  = {Iriondo, Ander and Lazkano, Elena and Ansuategi, Ander and
+             Rivera, Andoni and Lluvia, Iker and Tub{\'i}o, Carlos},
+  title   = {Learning Positioning Policies for Mobile Manipulation
+             Operations with Deep Reinforcement Learning},
+  journal = {International Journal of Machine Learning and Cybernetics},
+  volume  = {14},
+  number  = {9},
+  pages   = {3003--3023},
+  year    = {2023},
+  doi     = {10.1007/s13042-023-01815-8}
 }
 
-@manual{HenkelRoth2020mr3ROS,
-  author       = {Hertwig, Robert},
-  title        = {Betriebsanleitung mobile robot mr 3.0},
-  organization = {HENKEL + ROTH GmbH},
-  address      = {Ilmenau, Germany},
-  year         = {2020},
-  note         = {ROS control-centre operating manual for the \hero{}
-                  mobile base; internal documentation, January 2020}
+@article{Kang2024DoorOpening,
+  author  = {Kang, Gyuree and Seong, Hyunki and Lee, Daegyu and
+             Shim, David Hyunchul},
+  title   = {A Versatile Door Opening System with Mobile Manipulator through
+             Adaptive Position-Force Control and Reinforcement Learning},
+  journal = {Robotics and Autonomous Systems},
+  volume  = {180},
+  pages   = {104760},
+  year    = {2024},
+  doi     = {10.1016/j.robot.2024.104760}
 }
 
-% Teammate's systematic literature review (KALIMORO project) -- cite as the
-% source for the WBMP/WBC integration landscape discussed in Chapter 2.
-@report{SantAnna2026WBMPReview,
-  author      = {Sant'Anna, Tiago},
-  title       = {Systematic Literature Review -- Methodology Report:
-                 Whole-Body Motion Planning and Control Integration in
-                 Robotic Navigation Stacks},
-  type        = {Systematic Literature Review Report},
-  institution = {Laboratory for Machine Tools and Production Engineering
-                 (WZL), RWTH Aachen University},
-  year        = {2026},
-  month       = {4},
-  note        = {Unpublished internal report, KALIMORO project}
+% ---------------------------------------------------------------------
+%  Middleware and navigation stack (peer-reviewed)
+% ---------------------------------------------------------------------
+
+@article{Macenski2022ROS2,
+  author  = {Macenski, Steven and Foote, Tully and Gerkey, Brian and
+             Lalancette, Chris and Woodall, William},
+  title   = {Robot Operating System 2: Design, Architecture, and Uses in the
+             Wild},
+  journal = {Science Robotics},
+  volume  = {7},
+  number  = {66},
+  year    = {2022},
+  doi     = {10.1126/scirobotics.abm6074}
 }
 
-% Thesis topic description (task assignment) -- source for objectives and
-% the external-metrology validation requirement.
-@misc{Treheux2026TopicWBMP,
-  author       = {Tr{\'e}heux, Guillaume},
-  title        = {Whole-Body Motion Control for Autonomous Mobile
-                  Manipulators in Production Environments},
-  howpublished = {Thesis topic description, WZL-IQS, RWTH Aachen University},
-  year         = {2026},
-  note         = {Unpublished task assignment, Version March 2026}
+@inproceedings{Macenski2020Nav2,
+  author    = {Macenski, Steve and Martin, Francisco and White, Ruffin and
+               Clavero, Jonatan Gin{\'e}s},
+  title     = {The Marathon 2: A Navigation System},
+  booktitle = {2020 IEEE/RSJ International Conference on Intelligent Robots
+               and Systems (IROS)},
+  pages     = {2718--2725},
+  publisher = {IEEE},
+  year      = {2020},
+  doi       = {10.1109/IROS45743.2020.9341207}
 }

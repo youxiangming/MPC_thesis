@@ -2,34 +2,485 @@
 \chapter{Hardware Deployment and Preliminary Experimental Results}
 \label{ch:hardware}
 
+The dummy loop of \cref{ch:simulation} accepts the Experiment~A files on
+a kinematic plant. This chapter takes the same files through the MRT
+bridge of \cref{sec:hw-interfaces}: first with mock
+\texttt{ros2\_control} interfaces that echo commands into state, then on
+the physical \hero{} platform. The mock still has policy lag, velocity
+clamps and the Zenoh boundary; what it does not have is actuator
+dynamics or wheel-odometry drift. The gap between the two sessions is
+therefore the contribution of the plant and of the state estimate, on
+top of a residual that the dummy never sees.
+
+\Cref{sec:hw-deployment} records how the split deployment was started
+and which sessions are reported. \Cref{sec:hw-challenges} treats the
+timing and model problems that show up once the bridge is in the loop.
+\Cref{sec:hw-results} compares one mock lap with one hardware lap on the
+eight-corner path of \cref{fig:sim-box}, using the metrics of
+\cref{tab:sim-metrics}. Both traces are internal metrology
+(\cref{sec:sim-metrology}). A single slow lap is not an ISO~9283 test,
+and it is not yet a comparison with a decoupled baseline.
+
 % ---------------------------------------------------------------------
 \section{Deployment on the \hero{} Platform}
 \label{sec:hw-deployment}
 
-% TODO: startup sequence (Zenoh routers paired -> host MPC -> IPC MRT
-% bridge); wired vs. wireless link (wired chosen; must be stated as a
-% run condition); first successful real-robot run milestone.
+The topology is the split deployment of \cref{sec:distributed-arch}: the
+workstation solves the optimal-control problem and publishes the
+Experiment~A reference; the on-board IPC evaluates the policy and
+commands the drives. Both machines run the project containers on
+ROS~2~Jazzy with the Zenoh middleware. The workstation was attached to
+the platform subnet by Ethernet for every session below. The wireless
+access point of the platform remains a possible join path, and was the
+reason Zenoh was chosen in the first place, but it was not used as the
+control link here: a cable avoids the jitter that made DDS unusable on
+that hop, at the price of tethering a \qty{400}{\kilo\gram} base to a
+desk. The box of \cref{fig:sim-box} is small enough that the cable did
+not go taut in the recorded laps; it is still a run condition, not a
+property of the controller.
+
+Start-up follows the order already required by the reset handshake.
+Each machine starts its Zenoh router, the workstation router pointing at
+the IPC. The Experiment~A host launch then brings up the \mpc{} node, the
+waypoint target node and RViz, with the same task file and waypoint file
+the dummy used. Only after the reset service is advertised is the IPC
+launch started, so that the bridge can handshake immediately rather than
+wait. On the first start after a model change the workstation still
+spends about a minute compiling CppAD libraries; later starts reuse the
+cache. RViz is checked before anyone calls \texttt{/start}: the landed
+box, the orange lead legs, and in particular the lead-out at
+$z=\qty{1.15}{\meter}$, have to sit in free space. The approaching gate
+of \cref{sec:sim-node} then holds the reference at the lead-in until the
+measured \ee{} is within \qty{0.02}{\meter} of that point. Orientation
+is not part of the gate, so a residual attitude at entry is admitted
+into the first measured edge.
+
+A mock session is the same pair of launches with
+\texttt{mock\_arm:=true} and \texttt{mock\_platform:=true} on the IPC
+side. The controller manager, the MRT bridge and the three \ocs{}
+streams across Zenoh are those of the hardware stack; only the
+\texttt{ros2\_control} hardware interfaces are replaced by echo
+components~\cite{ros2control}. That is a stricter check than the dummy,
+and a weaker one than the robot. It is the last run that can still be
+repeated at a desk.
+
+Closed-loop motion on the physical platform was obtained before the
+sessions reported here. Those earlier laps are omitted, because the
+approaching gate, the segment identifiers and the metric topic were not
+yet the pipeline of \cref{ch:simulation}. The traces below are one mock
+lap and one hardware lap recorded on 14~August~2026, at the operating
+point of \cref{sec:sim-node}: path speed
+$\qty{0.05}{\meter\per\second}$, corner dwell $\qty{2.0}{\second}$,
+horizon $T=\qty{1.3}{\second}$, solution time window
+$T_{\mathrm{sol}}=\qty{1.2}{\second}$, feed-forward SLQ with one
+iteration, $\mu_{\mathrm{p}}=16$, $\mu_{\mathrm{o}}=3$, and
+$R_{\mathrm{base}}$ pre-scale $5.5$. The solver on the workstation used
+eight threads. Host and IPC logs were kept alongside the bags
+(\texttt{bag\_host\_0814\_1558} mock,
+\texttt{bag\_host\_0814\_1613} hardware). Metrics are computed from the
+exported \texttt{ee\_metrics} and solver-diagnostics streams, restricted
+to $\texttt{segment\_id}\ge 1$ as in \cref{sec:sim-pose-error}.
 
 % ---------------------------------------------------------------------
 \section{Deployment Challenges and Mitigations}
 \label{sec:hw-challenges}
 
-% TODO:
-%  - policy lag: solve time ~147-225 ms (mean), effective MPC rate
-%    ~4.2 Hz vs mpcDesiredFrequency=10; policyLag ~0.37 s (down 2.2x
-%    from ~0.8 s); DDP Initialization ~55.5% of solve time.
-%  - solve-time spikes (>1000 ms) vs ~1.03 s policy window -> bridge
-%    enters hold; mitigation = wider solutionTimeWindow (1.0 s),
-%    periodic re-publish, diagnostics ([policy_interp]/[policy_arrival]).
-%  - re-handshake silently overwriting reference -> 1 Hz re-publish.
-%  - cabling tethering the base (odom contamination) after switching to
-%    wired link.
+The real-time invariant of \cref{eq:rt-invariant} was written for the
+everyday file \texttt{task\_hardware.info}, where
+$T_{\mathrm{sol}}=\qty{1.0}{\second}$. The Experiment~A file widens that
+window to $\qty{1.2}{\second}$ so that a solve slower than the
+$\qty{10}{\hz}$ request can still hand the bridge a policy before the
+previous one expires. On the hardware lap the last-solve time had mean
+$\qty{227}{\milli\second}$, median $\qty{218}{\milli\second}$ and 95th
+percentile $\qty{297}{\milli\second}$; the slowest sample in that stream
+was $\qty{353}{\milli\second}$, and the solver's own running maximum
+reached $\qty{720}{\milli\second}$. Policies arrived at
+$\qty{4.4}{\hz}$. Twice the mean solve, $\qty{0.45}{\second}$, is still
+less than $T_{\mathrm{sol}}$, and the bridge did not enter a
+policy-exhaustion hold on this lap. The loop therefore ran in real time
+in the sense of \cref{eq:rt-invariant}, at less than half the requested
+rate.
+
+The mock lap was faster on average (mean $\qty{174}{\milli\second}$,
+effective $\qty{5.8}{\hz}$) but not safer in the tail. One solve took
+$\qty{1.12}{\second}$, which is inside the $\qty{1.2}{\second}$ window
+and would have been past the $\qty{1.0}{\second}$ window of the everyday
+file. The bridge logged three ``policy nearly exhausted'' warnings on
+that lap; the hardware lap logged none. \ocs{} still printed its
+``solution time window might be shorter than the MPC delay'' warning
+once on the robot and nine times on the mock. The warning compares the
+window with an internal delay estimate and is not the same test as a
+hold. Widening $T_{\mathrm{sol}}$ is what kept the spike from freezing
+the mock plant. It does not make a $\qty{10}{\hz}$ solver out of a
+$\qty{4}{\hz}$ one.
+
+Because a new policy is already old when it arrives, the input that the
+bridge applies is never the one at $\tau=0$ of the horizon.
+\Cref{fig:hw-lag} sketches the timing. On the hardware lap the lag at
+policy arrival---solve time plus the Zenoh hop---had mean
+$\qty{0.24}{\second}$ and 95th percentile $\qty{0.32}{\second}$ after
+the first few samples, against a maximum of $\qty{0.36}{\second}$.
+Between arrivals the bridge keeps evaluating the same policy, so the lag
+at the interpolation site grows until the next message; that quantity
+had mean $\qty{0.36}{\second}$. The mock figures were
+$\qty{0.18}{\second}$ at arrival and $\qty{0.29}{\second}$ at
+interpolation. In both cases the first one to two tenths of a second of
+every plan are unused. Diagnostics
+\texttt{[policy\_arrival]} and \texttt{[policy\_interp]} were left
+enabled at $\qty{0.1}{\second}$ on the IPC launch so that these numbers
+could be read from the log rather than inferred from solve time alone.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      >=Latex,
+      lbl/.style={font=\scriptsize, align=center},
+    ]
+    \draw[->] (0,0) -- (12.2,0) node[right] {$\tau$};
+    \foreach \x/\t in {0/0, 2.2/0.24, 3.3/0.36, 11.0/1.3} {
+      \draw (\x, 0.12) -- (\x, -0.12);
+      \node[below, lbl] at (\x, -0.12) {$\t\,\mathrm{s}$};
+    }
+    \draw[very thick, RWTHBlau100] (0, 0.85) -- (11.0, 0.85);
+    \node[lbl, anchor=west] at (0, 1.25)
+      {policy valid on $[t_0,\,t_0+T]$, $T=\qty{1.3}{\second}$};
+    \fill[RWTHOrange100] (0, 0.85) circle (2.2pt);
+    \node[lbl, above] at (0, 0.95) {$t_0$ snapshot};
+    \draw[RWTHOrange100, thick] (0, 0.55) -- (2.2, 0.55);
+    \node[lbl, above] at (1.1, 0.55) {solve $+\mathrm{net}$};
+    \fill[RWTHBlau100] (2.2, 0.85) circle (2.2pt);
+    \node[lbl, above] at (2.2, 0.95) {arrival};
+    \draw[thick, dashed, RWTHOrange100] (2.2, 0.85) -- (3.3, 0.85);
+    \fill[black] (3.3, 0.85) circle (2.2pt);
+    \node[lbl, above] at (3.6, 1.15) {typical evaluation};
+    \draw[<->] (0, -0.85) -- (2.2, -0.85);
+    \node[lbl, below] at (1.1, -0.85)
+      {unused prefix $\approx\qty{0.24}{\second}$};
+  \end{tikzpicture}
+  \caption[Policy lag on the hardware lap]{%
+    Policy lag on the hardware lap. A plan stamped at the snapshot
+    $t_0$ becomes available only after the solve and the network hop,
+    and is then read at a time that continues to advance until the next
+    plan arrives. Times are the measured means of that session, not
+    configuration values.}
+  \label{fig:hw-lag}
+\end{figure}
+
+If that prefix contains the only aggressive correction the solver is
+willing to apply, the robot never receives it. The \ocs{} model is a
+kinematic integrator: a large velocity at $\tau=0$ really would cancel a
+position error in a few tens of milliseconds, and a high
+$\mu_{\mathrm{p}}$ encourages exactly that pulse. The recorded policy
+topic stores the first input of each plan, not the input at the
+interpolation time, so this chapter cannot show the pulse being skipped
+on these laps. What it can show is a consistency check. Along-track lag
+$t_{\mathrm{lag}}$ of \cref{eq:lag-eff} should be comparable to the
+interpolation lag if delay is the whole story. On the mock it is
+(mean $t_{\mathrm{lag}}=\qty{0.39}{\second}$ against
+$\qty{0.29}{\second}$ of interpolation lag). On the robot it is not
+(mean $t_{\mathrm{lag}}=\qty{1.81}{\second}$). Delay explains the mock
+residual and does not explain the hardware residual.
+
+Two other failure modes of the bridge were already designed around and
+barely appeared in these sessions. A mid-run reset handshake still
+replaces the reference with a two-knot hold at the current \ee{}; the
+waypoint node re-publishes the same knots at $\qty{1}{\hz}$ on the
+\ocs{} time axis so that a lost reference comes back without a step in
+the command. The arm rate clamp of \cref{tab:bridge-guards} issued two
+warnings on each lap, which is not a dominant trace. Protective stops
+and teach-pendant mode errors, which dominated the first bring-up of the
+IPC launch, are operational rather than closed-loop problems: the UR
+driver has to start in headless remote mode, and the controller stopper
+has to keep the joint-trajectory controller in its ignore list, as
+already required in \cref{sec:hw-interfaces}. They are mentioned here
+only because a session that skips those checks never produces a bag.
+
+The remaining limitation is the model. Mock hardware realises the
+integrator: commanded wheel and joint rates appear in the next
+observation. The physical base is a \qty{400}{\kilo\gram} platform whose
+drive controller enforces its own acceleration limit, and the UR10e in
+streaming position control has a following error that the kinematic
+model does not know. Every re-solve on the robot therefore starts from a
+state the previous plan did not expect. That is a different problem from
+a slow solver, and \cref{sec:hw-results} is mostly about it.
 
 % ---------------------------------------------------------------------
 \section{Preliminary End-Effector Tracking Results}
 \label{sec:hw-results}
 
-% TODO: EE-pose tracking on the four-point rectangle; RMS/max per
-% straight segment and per corner; tangential lag ~ policyLag x v_ref
-% (H2, ~3.7 cm expected); closed-loop drift; per-sample join of
-% policyLag vs lag_eff. State the odom+FK internal-metrology limitation.
+Both sessions completed the eight measured edges and finished on the
+lead-out hold at $z=\qty{1.15}{\meter}$. The mock approaching gate ran
+for $\qty{10}{\second}$ from an initial \ee{} error of
+$\qty{1.04}{\meter}$; the robot needed $\qty{19}{\second}$ from
+$\qty{0.34}{\meter}$, longer than the mock from a third of the
+distance, and entered \texttt{RUNNING} at
+$\qty{19}{\milli\meter}$ with an orientation error of
+$\qty{0.061}{\radian}$ that the gate does not wait for. From the first
+sample with $\texttt{segment\_id}\ge 1$ to the last, both laps lasted
+$\qty{104}{\second}$, which is the commanded
+$\qty{4.50}{\meter}/\qty{0.05}{\meter\per\second}$ plus seven corner
+dwells of $\qty{2}{\second}$ (the last corner has no dwell before the
+lead-out). Task-completion time $T$ of \cref{tab:sim-metrics} therefore
+does not distinguish the two plants. Path shape does.
+
+\Cref{fig:hw-path} shows the commanded and attained \ee{} paths in a
+frame attached to the first corner, with $x$ along P1--P2 and $y$ along
+the leftward horizontal edge. The vertical edges of the box collapse in
+this view; they remain in the error signals. On the mock the attained
+path follows the rectangle with a lag that is visible mainly as a
+short-cut at the corners. On the robot the attained path is a rounded,
+inward-offset copy of the same rectangle, with a systematic bias of
+order \qty{10}{\centi\meter} rather than a delay that stays on the
+line.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \begin{tikzpicture}
+      \begin{axis}[
+          width=0.95\linewidth, height=6.1cm,
+          xlabel={$x$ / \si{\meter}},
+          ylabel={$y$ / \si{\meter}},
+          xmin=-0.12, xmax=0.78, ymin=-0.12, ymax=0.95,
+          axis equal image,
+          legend pos=north west,
+        ]
+        \addplot[black, thick] table {03_figures/hw_mock_des.dat};
+        \addplot[RWTHBlau100, thick] table {03_figures/hw_mock_act.dat};
+        \legend{commanded, attained}
+      \end{axis}
+    \end{tikzpicture}
+    \caption{Mock hardware}
+    \label{fig:hw-path-mock}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \begin{tikzpicture}
+      \begin{axis}[
+          width=0.95\linewidth, height=6.1cm,
+          xlabel={$x$ / \si{\meter}},
+          ylabel={$y$ / \si{\meter}},
+          xmin=-0.12, xmax=0.78, ymin=-0.12, ymax=0.95,
+          axis equal image,
+          legend pos=north west,
+        ]
+        \addplot[black, thick] table {03_figures/hw_real_des.dat};
+        \addplot[RWTHOrange100, thick] table {03_figures/hw_real_act.dat};
+        \legend{commanded, attained}
+      \end{axis}
+    \end{tikzpicture}
+    \caption{Physical robot}
+    \label{fig:hw-path-real}
+  \end{subfigure}
+  \caption[Commanded and attained \ee{} paths, mock versus hardware]{%
+    Commanded and attained \ee{} paths on the measured edges, in a
+    frame with origin at P1 and $x$ along P1--P2. The two vertical
+    edges of \cref{fig:sim-box} project onto the short sides.}
+  \label{fig:hw-path}
+\end{figure}
+
+\Cref{tab:hw-metrics} collects the scalar scores. Time-aligned position
+error $e_{\mathrm{p}}$ on the mock had RMS \qty{27}{\milli\meter} and
+maximum \qty{71}{\milli\meter}; on the robot the same quantities were
+\qty{130}{\milli\meter} and \qty{204}{\milli\meter}. Mean Hausdorff
+$\overline{H}$ rose from \qty{12}{\milli\meter} to
+\qty{62}{\milli\meter}, and the 95th percentile of the nearest-neighbour
+distances from \qty{23}{\milli\meter} to \qty{110}{\milli\meter}. The
+classical $H$ is dominated by a single mock sample at
+\qty{71}{\milli\meter} and is the weaker summary, which is why
+\cref{sec:sim-path-metrics} asked for $\overline{H}$ and $P_{95}$ as
+well. Orientation error grew with the plant too: RMS
+\qty{0.056}{\radian} on the mock, \qty{0.27}{\radian} on the robot, with
+a hardware maximum of \qty{0.47}{\radian} on later edges. With
+$n=1$ cycle, ISO path accuracy $\mathrm{AT}_{p}$ is not reported as a
+standard value; $h(B,A)$ on the densely resampled command is the nearest
+stand-in and sits at \qty{71}{\milli\meter} (mock) and
+\qty{123}{\milli\meter} (robot).
+
+\begin{table}[htbp]
+  \centering
+  \caption[Mock versus hardware scores on the measured Experiment~A lap]{%
+    Mock versus hardware scores on the measured Experiment~A lap
+    ($\texttt{segment\_id}\ge 1$). Hausdorff quantities use a
+    \qty{1}{\milli\meter} resampling of the commanded polyline, as in
+    \cref{sec:sim-path-metrics}. Solve time is the last-solve sample of
+    the diagnostics stream; policy lag at arrival is the MRT
+    \texttt{policyLagAtArrival} log, excluding the first five samples.}
+  \label{tab:hw-metrics}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+      & Mock hardware & Physical robot \\
+    \midrule
+    $e_{\mathrm{p}}$ RMS (max)
+      & \qty{27}{\milli\meter} (\qty{71}{\milli\meter})
+      & \qty{130}{\milli\meter} (\qty{204}{\milli\meter}) \\
+    $e_{\mathrm{o}}$ RMS (max)
+      & \qty{0.056}{\radian} (\qty{0.13}{\radian})
+      & \qty{0.27}{\radian} (\qty{0.47}{\radian}) \\
+    $H$ / $\overline{H}$ / $P_{95}$
+      & \qty{71}{\milli\meter} / \qty{12}{\milli\meter} /
+        \qty{23}{\milli\meter}
+      & \qty{135}{\milli\meter} / \qty{62}{\milli\meter} /
+        \qty{110}{\milli\meter} \\
+    mean $t_{\mathrm{lag}}$
+      & \qty{0.39}{\second}
+      & \qty{1.81}{\second} \\
+    mean solve time (effective rate)
+      & \qty{174}{\milli\second} (\qty{5.8}{\hz})
+      & \qty{227}{\milli\second} (\qty{4.4}{\hz}) \\
+    mean policy lag at arrival
+      & \qty{0.18}{\second}
+      & \qty{0.24}{\second} \\
+    measured lap $T$
+      & \qty{104}{\second}
+      & \qty{104}{\second} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\Cref{fig:hw-error} plots $e_{\mathrm{p}}(t)$ on the measured edges,
+with time zero at the first admitted sample. The mock trace stays below
+\qty{50}{\milli\meter} except for a short spike at the first corner. The
+hardware trace climbs through the first long edge, plateaus around
+\qty{15}{\centi\meter} to \qty{20}{\centi\meter} on edges 2--4 and~6, and
+only comes back toward \qty{5}{\centi\meter} on the last horizontal
+edge. It is not a delayed copy of the mock.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.92\linewidth, height=5.6cm,
+        xlabel={time on measured path / \si{\second}},
+        ylabel={$e_{\mathrm{p}}$ / \si{\milli\meter}},
+        xmin=0, xmax=105, ymin=0, ymax=220,
+        legend pos=north west,
+      ]
+      \addplot[RWTHBlau100, thick] table {03_figures/hw_mock_ep.dat};
+      \addplot[RWTHOrange100, thick] table {03_figures/hw_real_ep.dat};
+      \legend{mock, robot}
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Time-aligned \ee{} position error on the measured path]{%
+    Time-aligned \ee{} position error on the measured path. Time zero is
+    the first sample with $\texttt{segment\_id}\ge 1$.}
+  \label{fig:hw-error}
+\end{figure}
+
+Per-edge numbers make the same split (\cref{tab:hw-segments}). The mock
+RMS stays between \qty{10}{\milli\meter} and \qty{41}{\milli\meter} on
+every edge. The robot is already at \qty{69}{\milli\meter} RMS on the
+opening \qty{0.60}{\meter} edge and peaks at \qty{175}{\milli\meter} on
+edge~3. The two vertical edges (4 and~8), which the base cannot help
+with, are not the worst hardware edges; the long horizontal edges are.
+Along-track error on the robot is positive on seven of the eight edges
+and has mean \qty{91}{\milli\meter}, which at
+$v_{\mathrm{ref}}=\qty{0.05}{\meter\per\second}$ is the
+$\qty{1.81}{\second}$ of $t_{\mathrm{lag}}$ already quoted. A pure
+policy-lag prediction $0.36\,\mathrm{s}\times v_{\mathrm{ref}}$ is only
+\qty{18}{\milli\meter}. The mock along-track mean, \qty{19}{\milli\meter},
+matches that prediction. The extra \qty{70}{\milli\meter} on the robot
+is not delay in the MRT bridge.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Per-edge \ee{} position error on the measured lap]{%
+    Per-edge \ee{} position error on the measured lap. Edges 1, 3, 5
+    and~7 are the \qty{0.60}{\meter} sides; 2 and~6 are the
+    \qty{0.80}{\meter} sides; 4 and~8 are the vertical \qty{0.25}{\meter}
+    sides.}
+  \label{tab:hw-segments}
+  \begin{tabularx}{\linewidth}{@{}lXXXX@{}}
+    \toprule
+    Edge & Mock RMS & Mock max & Robot RMS & Robot max \\
+    \midrule
+    1 & \qty{16}{\milli\meter} & \qty{71}{\milli\meter}
+      & \qty{69}{\milli\meter} & \qty{80}{\milli\meter} \\
+    2 & \qty{41}{\milli\meter} & \qty{53}{\milli\meter}
+      & \qty{143}{\milli\meter} & \qty{187}{\milli\meter} \\
+    3 & \qty{10}{\milli\meter} & \qty{18}{\milli\meter}
+      & \qty{175}{\milli\meter} & \qty{204}{\milli\meter} \\
+    4 & \qty{31}{\milli\meter} & \qty{45}{\milli\meter}
+      & \qty{145}{\milli\meter} & \qty{174}{\milli\meter} \\
+    5 & \qty{22}{\milli\meter} & \qty{26}{\milli\meter}
+      & \qty{98}{\milli\meter} & \qty{129}{\milli\meter} \\
+    6 & \qty{30}{\milli\meter} & \qty{35}{\milli\meter}
+      & \qty{169}{\milli\meter} & \qty{202}{\milli\meter} \\
+    7 & \qty{18}{\milli\meter} & \qty{21}{\milli\meter}
+      & \qty{60}{\milli\meter} & \qty{140}{\milli\meter} \\
+    8 & \qty{39}{\milli\meter} & \qty{45}{\milli\meter}
+      & \qty{111}{\milli\meter} & \qty{160}{\milli\meter} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Corner dwells isolate the same point without mixing it into a moving
+reference. On the mock, the last $\qty{2}{\second}$ of edges 1--7---the
+dwell windows---fall to between \qty{5}{\milli\meter} and
+\qty{25}{\milli\meter}. On the robot the same windows remain between
+\qty{53}{\milli\meter} and \qty{168}{\milli\meter} and do not collapse.
+Once the command has stopped, a lag of $\qty{0.36}{\second}$ should
+have died out. What remains is a steady offset that the receding-horizon
+loop does not remove at this operating point.
+
+Solve time over the two sessions is shown in \cref{fig:hw-solve} only to
+close the timing discussion. After the first seconds both traces sit
+near their means; the mock spike to $\qty{1.12}{\second}$ is the event
+that produced the exhaustion warnings. Neither curve tracks
+$e_{\mathrm{p}}(t)$. A slow solver would have frozen the robot through
+the hold logic of \cref{tab:bridge-guards}. That did not happen. The
+tracking gap is left by the plant and by the lag acting on a model that
+assumes the plant is an integrator.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.92\linewidth, height=5.2cm,
+        xlabel={wall time from first diagnostic / \si{\second}},
+        ylabel={last solve time / \si{\second}},
+        xmin=0, xmax=210, ymin=0, ymax=1.25,
+        legend pos=north east,
+      ]
+      \addplot[RWTHBlau100, thick] table {03_figures/hw_mock_solve.dat};
+      \addplot[RWTHOrange100, thick] table {03_figures/hw_real_solve.dat};
+      \addplot[black, dashed, domain=0:210] {0.1};
+      \addplot[gray, dashed, domain=0:210] {1.2};
+      \legend{mock, robot, $\qty{10}{\hz}$ period, $T_{\mathrm{sol}}$}
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Last-solve time on the mock and hardware sessions]{%
+    Last-solve time on the mock and hardware sessions. The lower dashed
+    line is the requested $\qty{10}{\hz}$ period; the upper line is
+    $T_{\mathrm{sol}}=\qty{1.2}{\second}$.}
+  \label{fig:hw-solve}
+\end{figure}
+
+Two caveats bound what these numbers may be used for. First, both
+desired and attained poses are reconstructed from the \mpc{} observation,
+so wheel-odometry drift is shared by the command frame and the measured
+\ee{}. On the robot the box was landed at a base pose near
+$(23.2,\,9.0)$ in the odometry frame, which is the accumulated motion of
+the platform before this lap, not a localisation in the hall. Closed-loop
+drift of the attained path relative to its own start was
+\qty{15}{\centi\meter} on the robot and \qty{11}{\centi\meter} on the
+mock, most of it in $z$ at the last vertical edge rather than a planar
+loop-closure error. None of this is an ISO accuracy statement; an
+external \ee{} pose is still missing. Second, each plant was run once, at
+one speed, without a decoupled baseline. Repeatability $\mathrm{RT}_{p}$,
+the three speed levels of ISO Table~3, and a Nav2 plus MoveIt comparison
+are outside the present data.
+
+What the pair of laps does show is narrower. The Experiment~A files that
+the dummy accepted can be executed by the hardware stack from approaching
+gate to lead-out hold. Mock hardware, which shares the bridge and the
+lag with the robot, tracks at a few centimetres and at an along-track
+delay consistent with policy lag. The physical platform, with the same
+files, tracks at one to two decimetres and does not catch the reference
+during dwell. The next improvements that would change those numbers are
+a shorter solve (so that $u(\tau=0)$ is no longer in the past), a model
+that knows the base cannot step in velocity, and an external pose of the
+\texttt{tool0} frame.

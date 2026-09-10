@@ -24,23 +24,27 @@
 \newcommand\titlegerman{Integration und Validierung einer
   ganzk\"orperbasierten modellpr\"adiktiven Regelung f\"ur einen mobilen
   Manipulator in der linienlosen Montage}
-\author{[Xiangming You]}                 % TODO: fill in your full name
+\author{Xiangming You}                 % TODO: fill in your full name
 \date{\today}                          % or \formatdate{dd}{mm}{yyyy}
 
 % Thesis type: PA (Projektarbeit / Project Thesis)
 \newcommand{\thesistype}{PA}           % options: PA, BA, MA, Dissertation
-\newcommand\studentid{[Matriculation No.440593]}   % TODO: fill in your student ID
+\newcommand\studentid{Matriculation No.440593}   % TODO: fill in your student ID
 \newcommand\institute{Chair of Intelligence in Quality Sensing | WZL |
   RWTH Aachen University}                     % TODO: verify chair
 \newcommand\institutegerman{Lehrstuhl f\"ur Informations-, Qualit\"ats-
   und Sensorsysteme in der Produktion | WZL | RWTH Aachen}   % TODO: verify
-\newcommand\supervisor{[Guillaume Tréheux], M.Sc.}   % TODO: fill in
+\newcommand\supervisor{Guillaume Tréheux, M.Sc.}
 \newcommand\firstexaminer{Univ.-Prof. Dr.-Ing. Robert H. Schmitt}  % TODO: verify
 \newcommand\secondexaminer{}                  % add if applicable
 
 
-% Set up Bibliography (biblatex + biber)
+% Set up Bibliography (biblatex + biber). Two resources, split by whether a
+% reference manager can own the entry -- see lit/README.md.
+%   References.bib      published literature, Crossref-verified
+%   sources-manual.bib  repos, vendor docs, standards, manuals, internal reports
 \bibliography{lit/References.bib}
+\addbibresource{lit/sources-manual.bib}
 
 % Set up Graphics
 \graphicspath{{./03_figures/}}

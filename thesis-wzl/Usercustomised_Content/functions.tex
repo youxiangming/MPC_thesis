@@ -9,6 +9,10 @@
 \newcommand{\hero}{HERo}
 
 % --- Math: state / input vectors -------------------------------------
-\newcommand{\svec}{\bm{x}}
-\newcommand{\uvec}{\bm{u}}
-\newcommand{\qarm}{\bm{q}_{\mathrm{arm}}}
+% \symbf (unicode-math) rather than \bm: the class loads unicode-math with
+% Fira Math, where \bm produces extended mathchars that XeTeX rejects in
+% sub/superscript and accent positions.
+\newcommand{\svec}{\symbf{x}}
+\newcommand{\uvec}{\symbf{u}}
+\newcommand{\qarm}{\symbf{q}_{\mathrm{arm}}}
+\newcommand{\qarmdot}{\dot{\symbf{q}}_{\mathrm{arm}}}

@@ -1,0 +1,19 @@
+---
+description: Always treat /home/xy/thinking as a thesis source; refresh it before writing any thesis content.
+alwaysApply: true
+---
+
+# Thinking vault is a standing thesis source
+
+`/home/xy/thinking` is Xiangming's Obsidian vault of robot-debug logs, failure/solution notes, experiment ideas, and thesis outlines. It is **project memory**, not optional background.
+
+Named high-priority note (always consult when writing deployment or experiments): `/home/xy/thinking/Ros build.md` — IPC/PC launch, Experiment A, rosbag, Zenoh, time sync, solver/policy-lag logs.
+
+Before drafting or editing any thesis/seminar text:
+
+1. Follow the `load-hero-project` skill, including its **thinking-vault refresh**.
+2. Run the mtime check against `.cursor/thinking-source-state.md`. If any `.md`/`.canvas` (except `.obsidian/`) is newer than `last_checked`, read those files and update the stamp. If writing Ch.3/4/5, also re-open `Ros build.md` when it changed or when the section is about launch/logging.
+3. Use the notes for problems, mitigations, experiment intent, and narrative of what was hard. **Do not copy numbers, topologies, or "current architecture" from the vault** — verify those in `/home/xy/hero-ros2`.
+4. Never modify files under `/home/xy/thinking`. Only update the stamp in this repo.
+
+Skip the refresh only if this same session already reported the vault check (updated vs unchanged).

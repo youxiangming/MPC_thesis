@@ -2,34 +2,196 @@
 \chapter{Conclusion and Outlook}
 \label{ch:conclusion}
 
+This chapter closes the thesis by returning to the objective of
+\cref{sec:objectives}: integrate whole-body \mpc{} on the physical
+\hero{} platform and characterise its \ee{}-tracking behaviour. The
+preceding chapters have already separated what the optimiser does on its
+kinematic model (\cref{ch:simulation}), what the MRT bridge adds
+(\cref{sec:hw-challenges}), and what the plant adds on top
+(\cref{sec:hw-results}). What follows is a concise account of what was
+achieved, what the present data do and do not establish, and which
+engineering steps would most directly change the numbers reported in
+\cref{ch:hardware}.
+
 % ---------------------------------------------------------------------
 \section{Summary}
 \label{sec:concl-summary}
 
-% TODO: what was achieved -- OCS2 whole-body MPC integrated and running
-% on real HERo hardware in a distributed architecture; EE tracking
-% characterised. "Everything works, but ..." -> lead into limitations
-% (residual policy lag, effective MPC rate below setpoint, internal-only
-% metrology, cabling constraint, unmodeled base acceleration limit).
+The work set out to move \ocs{} whole-body \mpc{} from a framework
+demonstration to a deployable stack on a differential-drive mobile
+manipulator in an LMAS-oriented setting. Against that goal, four
+contributions were delivered.
+
+First, a whole-body motion-planning approach was selected for the
+\hero{} platform after comparing \ocs{} with alternative frameworks
+(\cref{ch:sota}). Second, \ocs{} was integrated into the existing
+software stack: a split host/on-board deployment over Zenoh keeps the
+actuation path local to the IPC while the SLQ solver runs on a
+workstation (\cref{sec:distributed-arch}); a nine-state kinematic model
+with non-holonomic base, safety-panel joint limits, and a reduced
+self-collision set was parameterised for on-robot operation (\cref{sec:wholebody-model});
+and an MRT bridge turns the published policy into wheel and joint
+commands under explicit guards (\cref{sec:hw-interfaces}). Third, a
+simulation-based acceptance path was built around Experiment~A: the same
+task file and waypoint list that the robot will load are exercised in a
+dummy MRT loop, with internal metrology and ISO-oriented path metrics
+defined before any hardware session (\cref{ch:simulation}). Fourth, that
+configuration was taken through mock \texttt{ros2\_control} hardware and
+onto the physical platform. The closed eight-corner path of
+\cref{fig:sim-box} completed on both plants; the approaching gate,
+segment tagging, and lead-out hold that \cref{sec:sim-node} specifies all
+appeared in the recorded sessions.
+
+The tracking outcome is more qualified. On mock hardware, which shares
+the bridge and the policy lag with the robot but replaces the plant by
+command echoing, the attained \ee{} path followed the commanded rectangle
+at a few centimetres (\cref{tab:hw-metrics}). On the physical robot, with
+the same files and the same wall-clock lap duration, position error
+remained at one to two decimetres on the long edges and did not collapse
+during corner dwells (\cref{fig:hw-error,tab:hw-segments}). The loop
+therefore ran in real time in the sense of \cref{eq:rt-invariant}---no
+policy-exhaustion hold occurred on the hardware lap---but the effective
+\mpc{} rate was about \qty{4.4}{\hz} against a \qty{10}{\hz} request, and
+the first one to two tenths of a second of each plan were lost to solve
+time and network delay before the bridge could apply them
+(\cref{fig:hw-lag}). Along-track lag consistent with that delay explains
+the mock residual; it does not explain the larger hardware offset
+(\cref{sec:hw-challenges}).
+
+Several constraints bound how strongly these results can be read. All
+desired and attained poses were reconstructed from wheel odometry and
+joint encoders inside the waypoint node (\cref{sec:sim-metrology}), so
+the scores measure internal consistency of the closed loop, not absolute
+accuracy in the hall. Each plant was exercised once, at
+$v_{\mathrm{ref}}=\qty{0.05}{\meter\per\second}$, without the three
+mandatory ISO speed levels or repeated cycles. The workstation was
+connected by Ethernet throughout (\cref{sec:hw-deployment}); the numbers
+therefore do not speak to control over the platform's wireless link. The
+\ocs{} model treats the base as a velocity integrator and knows nothing
+of the drive controller's acceleration limit or of the UR10e following
+error under streaming position control. Finally, no decoupled Nav2 plus
+MoveIt baseline was run on the same path, so the thesis validates
+whole-body execution and characterises its residual; it does not yet
+demonstrate superiority over sequential planning on identical metrics.
 
 % ---------------------------------------------------------------------
 \section{Critical Reflection}
 \label{sec:concl-reflection}
 
-% TODO: honest appraisal -- what the results do and do not prove;
-% odom+FK measures internal consistency, not absolute accuracy; single
-% platform / limited repetitions; wired-link dependence of the numbers;
-% model mismatch (base accel limit not in OCS2 model).
+The experiments answer a narrower question than the LMAS motivation of
+\cref{sec:lmas} might suggest. They show that a time-parameterised
+\ee{} reference, published as \ocs{} \texttt{TargetTrajectories} rather
+than as a sequence of static goals, can be executed end to end on
+\hero{} hardware by a receding-horizon whole-body controller, and they
+localise the largest tracking gap to the plant and to model mismatch
+rather than to a broken data pipeline or a reference that the dummy
+already rejects. They do not, by themselves, establish that this
+pipeline meets production accuracy requirements, nor that whole-body
+\mpc{} outperforms a well-tuned decoupled stack on task completion time
+or corner accuracy.
+
+The metric layer deserves the same caution. Time-aligned pose error
+$e_{\mathrm{p}}$ and the along-track lag $t_{\mathrm{lag}}$ of
+\cref{eq:lag-eff} are meaningful comparisons \emph{within} one
+controller, because desired and attained poses share the same
+observation time and the same state estimate. Hausdorff distance and its
+mean and percentile variants (\cref{eq:mean-hausdorff}) remove the
+assumption of a common speed profile and are the right preparatory step for a later
+comparison with a pose-to-pose baseline, but with $n=1$ cycle they still
+do not yield ISO path accuracy $\mathrm{AT}_{p}$ or repeatability
+$\mathrm{RT}_{p}$ in the sense of ISO~9283~\cite{ISO9283}. An external
+measurement of \texttt{tool0}---for example from an OptiTrack rig as
+already noted in \cref{sec:sim-metrology}---would be needed before any
+claim about absolute \ee{} pose error enters the thesis.
+
+The split between mock and hardware results is instructive in what it
+rules out. Mock hardware preserves policy lag, velocity clamps, and the
+Zenoh hop; when it tracks well, the reference geometry, the \ocs{} time
+axis, and the cost tuning are not the dominant fault. Hardware error that
+grows on horizontal edges where the base must contribute, persists when
+the command stops at a dwell, and exceeds a pure lag prediction of
+$0.36\,\mathrm{s}\times v_{\mathrm{ref}}$ (\cref{sec:hw-results}),
+points instead to unmodelled base dynamics and to re-solves that start
+from a state the previous plan did not anticipate. That reading is
+consistent with the kinematic integrator in the model and with the
+\qty{400}{\kilo\gram} platform's own motion limits, but it remains a
+diagnosis from internal signals; isolating wheel slip, odometry drift,
+and arm tracking error would need additional sensing or deliberately
+simpler motions.
+
+Scope limits are finally worth stating plainly. One mobile manipulator,
+one closed path, and one lap per plant are enough to debug integration
+and to expose the main failure modes; they are not enough to support
+statistical claims about repeatability or about behaviour across the
+workspace. The progression from RViz single-goal regulation to
+time-parameterised trajectory tracking via the waypoint node
+(\cref{sec:sim-node}) is a real extension of the upstream \ocs{} demo,
+but the evaluation has so far exercised only the tracking regime on a
+single box geometry.
 
 % ---------------------------------------------------------------------
 \section{Recommendations for Resolving Present Issues}
 \label{sec:concl-recommendations}
 
-% TODO:
-%  - reduce solve time (attack DDP Initialization ~55.5%; core pinning;
-%    evaluate useFeedbackPolicy=true) to raise effective MPC rate.
-%  - external ground truth (laser tracker / motion capture) for absolute
-%    accuracy.
-%  - EKF (robot_localization) if odom drift dominates closed-loop drift.
-%  - model the base acceleration limit inside OCS2.
-%  - Experiment B (base orbiting + fixed EE) and further variants.
+The hardware lap already identifies where effort would change the
+recorded numbers, rather than merely widen the solution time window.
+
+\paragraph{Raise the effective \mpc{} rate and shorten policy lag.}
+Mean solve time on the hardware session was \qty{227}{\milli\second}
+(\cref{tab:hw-metrics}), so the controller replans at roughly half the
+configured \qty{10}{\hz}. The DDP benchmark that \ocs{} prints at
+shutdown attributes that time to two stages above all. In an earlier
+instrumented session on the same node, summarised over $1794$
+iterations, \emph{Initialization} averaged \qty{170}{\milli\second} per
+iteration (\qty{56}{\percent} of solver runtime) and \emph{Search
+Strategy} \qty{111}{\milli\second} (\qty{36}{\percent}), while the
+backward pass stayed below \qty{1}{\milli\second}. The absolute values
+belong to that session rather than to the laps of \cref{ch:hardware},
+but the split suggests attacking warm-start cost and rollout search
+before adding SLQ iterations. Pinning the solver threads
+away from unrelated workstation load, keeping the Release build used here,
+and revisiting the twelve-pair self-collision set if distance queries
+still dominate are practical first steps. Enabling a feedback policy
+(\texttt{useFeedbackPolicy=true} in the task file; currently disabled in
+\cref{tab:mpc-config}) would let the bridge use linear gains between
+sparse policy updates; the trade-off is larger policy messages over
+Zenoh, which must be measured on the link that will actually be used in
+production. Widening $T_{\mathrm{sol}}$ further, as in the Experiment~A
+file, prevents exhaustion when a solve spikes; it does not restore the
+aggressive $\tau=0$ input that lag already consumes (\cref{fig:hw-lag}).
+
+\paragraph{Close the model--plant gap on the base.}
+The largest hardware residual appears where the base must translate while
+the arm holds orientation, and it does not relax when the reference stops.
+Adding an acceleration limit or a first-order lag on base velocities
+inside the \ocs{} model would align the optimiser with what the
+freeMoVe drive stack enforces and reduce the state mismatch that each
+re-solve inherits. A complementary experiment---base motion on a closed
+planar path with the \ee{} held fixed in space, the converse of
+Experiment~A---would separate base tracking from arm-dominated edges
+without changing the software architecture.
+
+\paragraph{Improve pose estimation and external metrology.}
+If odometry drift dominates closed-loop drift, fusing wheel odometry
+with additional proprioceptive or exteroceptive sources through an EKF
+(for example \texttt{robot\_localization}) is the standard next step; the
+present pipeline uses raw wheel odometry only (\cref{sec:hero-platform}).
+For claims that must survive examination against ISO~9283, an independent
+\ee{} pose remains mandatory. Ground-truth capture would also break the
+confounding between desired and attained frames noted in
+\cref{sec:sim-metrology}.
+
+\paragraph{Complete the evaluation programme.}
+Three items would turn the present characterisation into a comparative
+study aligned with \cref{sec:objectives}. A decoupled Nav2 plus MoveIt
+baseline on the same corner set would supply $\mathrm{AP}_{p}$ and task
+time on common footing (\cref{sec:sim-path-metrics}). ISO Table~3 speed
+levels and $n\ge 3$ cycles on the whole-body pipeline would populate
+$\mathrm{AT}_{p}$ and $\mathrm{RT}_{p}$. Re-running the mock versus
+hardware comparison over a wireless Zenoh link would test whether the
+Ethernet sessions of \cref{sec:hw-deployment} bias the timing budget
+optimistically. Until those pieces exist, the defensible statement is the
+one \cref{sec:hw-results} already makes: the Experiment~A files execute
+on hardware; mock hardware tracks at centimetre scale with lag consistent
+with policy delay; the physical platform does not, and the gap is not
+explained by solver failure alone.
