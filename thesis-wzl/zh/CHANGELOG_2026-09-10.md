@@ -98,9 +98,30 @@
 
 | 项 | 状态 | 出处 |
 |---|---|---|
+| Ch3–6 溯源审查 | **本会话已做**（见下节 F） | 邮件第 1 条；HANDOFF Next Steps #5 |
 | 拆分第 3 章 | **等你拍板**，结构性改动会动全书编号 | 批注 27「beefy chapter, might consider splitting」 |
-| `Bergs2024EdgeComputing` 插入正文 | 条目已建，引用 0 次 | 建议 §1.1 与 §3.2 |
+| `Bergs2024EdgeComputing` / `Treheux2026TopicWBMP` 插入正文 | **忽略，不做**；bib 条目可留着不引用 | **用户指令 2026-09-10**「不重要」；勿再提起 |
 | 英文摘要 | 未写，送审阻塞项 | `REVIEW_2026-08-20.md` P0-1 |
 | 缩略语表 | 仍是模板自带 140 条无关条目且被注释 | `REVIEW_2026-08-20.md` P0-6 |
 | 论文类型 PA vs MA | `main.tex` 写 PA，选题书写 Master's | `REVIEW_2026-08-20.md` P0-5 |
-| Ch3–6 溯源审查 | 未做，密度远低于 Ch1–2 | 邮件第 1 条同样适用 |
+| Ch3 平台/握手图、Ch4 dummy 结果图 | 溯源审查标为 P1/P2，本会话未画 | 邮件第 2 条「wall of text」 |
+
+---
+
+## F. Ch3–6 溯源审查（16:22–16:35，Cursor）
+
+审计基线：Ch1/Ch2 各约 30–37 处 `\cite`；Ch3–6 原先 4 / 5 / 1 / 1。实现章不以相关工作章的密度为目标，但方法主张、标准、外部工具与教科书定义必须有出处；本项目配置/测量/自建叙述不引。
+
+| 时间 | 内容 | 原因 / 出处 |
+|---|---|---|
+| 16:25 | 新增 `Carpentier2019Pinocchio`、`Huttenlocher1993Hausdorff`、`Dubuisson1994ModifiedHausdorff`、`Moore2015RobotLocalization`（均 Crossref 核对） | Ch3/4 Pinocchio、Hausdorff；Ch6 EKF/`robot_localization`；邮件第 1、5 条 |
+| 16:25 | `sources-manual.bib` 新增 `CppAD`、`Chrony`、`twistMux` | Ch3 自动微分 / 对时 / twist 仲裁；无 DOI，手维 |
+| 16:28 | **Ch3**：非完整/差速、OCS2 MPC–MRT、SLQ、barrier、Pinocchio、CppAD、Chrony、Zenoh/DDS、`twist_mux`、JTC；三处工具引用移到句尾；弱化 absolute/主观措辞 | 邮件第 1 条；批注 46 位置规则；`supervisor-requirements.md` §1–4 |
+| 16:30 | **Ch4**：dummy/`ocs2Toolbox`、MPC 残差、Nav2+MoveIt、Hausdorff+修正型、Pinocchio、$e_o$、ISO APₚ/Table~3/cl.~8.2/dwell 模式、MoveIt `bent`、表注与图注 | 同上；批注 12/20 类「公式/定义也要引」 |
+| 16:32 | **Ch5**：ISO 9283、UR10e 跟随误差、freeMoVe 加速度限、Nav2+MoveIt 评价缺口；「systematic bias」→「consistent bias」 | 邮件第 1 条；批注 30 慎用 systematic |
+| 16:33 | **Ch6**：ISO / UR10e / freeMoVe / Nav2+MoveIt / Zenoh / feedback policy；「standard next step」改为「direct next step」+ `Moore2015`；「preceding chapters have」→ 现在时 | 批注 29 现在时；邮件第 1 条 |
+| 16:35 | 编译 exit 0，undefined 0，**57→59 页**，bbl **53→61**；cite 计数 Ch3 **4→17**，Ch4 **5→20**，Ch5 **1→5**，Ch6 **1→11** | 本会话验证 |
+
+**刻意未做（等拍板）：** 新画 Ch3 平台/握手 TikZ、Ch4 dummy 结果曲线、拆分第 3 章。
+
+**已否决（勿再提起）：** 向正文插入 `Bergs2024EdgeComputing` / `Treheux2026TopicWBMP`（用户 2026-09-10）。

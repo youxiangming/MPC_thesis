@@ -36,13 +36,14 @@ so that the shoulder sits roughly at the height of a workpiece carrier.
 Two properties of this combination shape the control problem. The first
 is the drive geometry: the base pose has three planar degrees of freedom
 but only two independent velocity inputs, and the base cannot translate
-sideways. A whole-body planner must respect this non-holonomic
-restriction, otherwise it produces \ee{} paths that the base cannot
-follow. The second is inertia. Moving a \qty{400}{\kilo\gram} platform
-is slow, and the safety concept of the platform limits its speed
-independently of what a controller may request, which is why the base
-velocities in \cref{sec:wholebody-model} are capped an order of
-magnitude below the arm's capability.
+sideways~\cite{Lynch2017ModernRobotics}. A whole-body planner must
+respect this non-holonomic restriction, otherwise it produces \ee{} paths
+that the base cannot follow~\cite{Giftthaler2017Kinematic}. The second is
+inertia. Moving a \qty{400}{\kilo\gram} platform is slow, and the safety
+concept of the platform limits its speed independently of what a
+controller may request, which is why the base velocities in
+\cref{sec:wholebody-model} are capped an order of magnitude below the
+arm's capability.
 
 The kinematic tree is rooted at the frame \texttt{footprint}, which lies
 on the ground plane midway between the drive wheels, with $x$ forward,
@@ -64,24 +65,25 @@ is (\cref{sec:wholebody-model}).
 
 Computation is split over two machines on the robot's own
 \texttt{192.168.12.0/24} subnet. An industrial PC (IPC) inside the
-platform hosts the ROS~2 Jazzy~\cite{ROS2} control stack in a container
-and reaches the arm controller over the same subnet; an external
-workstation joins the subnet either by cable or through the platform's
-wireless access point. Which software runs where is the subject of the
-next section.
+platform hosts the ROS~2 Jazzy control stack in a container and reaches
+the arm controller over the same subnet; an external workstation joins
+the subnet either by cable or through the platform's wireless access
+point~\cite{ROS2,Macenski2022ROS2}. Which software runs where is the
+subject of the next section.
 
 % ---------------------------------------------------------------------
 \section{Distributed System Architecture for Real-Time \mpc{}}
 \label{sec:distributed-arch}
 
-Solving the optimal-control problem is by far the most expensive part of
-the loop, and the on-board IPC is a small machine. Running the solver
-there would have forced a shorter horizon or a coarser model. The
-MPC--MRT split of \ocs{} (\cref{sec:sota-ocs2}) offers a way out: the
-optimiser and the client that evaluates its policy are separate
-processes that exchange messages, so they may live on different
-machines. Two deployments were implemented on this basis, and both are
-kept in the repository because they fail in different ways.
+Solving the optimal-control problem is the most expensive part of the
+loop relative to the remaining nodes on the IPC, and the on-board IPC is
+a small machine. Running the solver there would have forced a shorter
+horizon or a coarser model. The MPC--MRT split of \ocs{}
+(\cref{sec:sota-ocs2}) offers a way out: the optimiser and the client
+that evaluates its policy are separate processes that exchange messages,
+so they may live on different machines~\cite{ocs2Toolbox}. Two
+deployments were implemented on this basis, and both are kept in the
+repository because they fail in different ways.
 
 In the \emph{split} deployment, which is the one used for the
 experiments, the workstation runs the \mpc{} node, the target-generating
@@ -141,14 +143,15 @@ integrated deployment they do not: the workstation compares its own
 \texttt{now()} against IPC-stamped messages, and an offset larger than
 the \qty{0.2}{\second} staleness threshold makes every measurement look
 stale, which stops the robot. Chrony or an equivalent time service is
-therefore mandatory there and pointless in the split deployment.
+therefore mandatory there and pointless in the split
+deployment~\cite{Chrony}.
 
-Both deployments were run with the Zenoh middleware
-implementation~\cite{zenoh} rather than the default DDS. The switch was
-made during bring-up, after DDS discovery over the platform's wireless
-link had repeatedly failed to establish the \ocs{} streams; no
-systematic comparison of the two middlewares was recorded, so this is a
-deployment decision and not a measured result.
+Both deployments were run with the Zenoh middleware implementation rather
+than the default DDS transport of ROS~2. The switch was made during
+bring-up, after DDS discovery over the platform's wireless link had
+repeatedly failed to establish the \ocs{} streams; no side-by-side
+comparison of the two middlewares was recorded, so this is a deployment
+decision and not a measured result~\cite{zenoh,Macenski2022ROS2}.
 Zenoh requires a router process on each machine, with one router
 configured to connect to the other; the workstation router is pointed at
 the IPC router. \Cref{fig:architecture} shows the resulting node and
@@ -218,13 +221,13 @@ topic layout for the split deployment.
   \label{fig:architecture}
 \end{figure}
 
-One consistency requirement is easy to violate and worth stating
+One consistency requirement is easy to violate and is stated here
 explicitly. The \mpc{} node and the MRT bridge each build their own
 Pinocchio model from a URDF file that is exported from the platform
-description at launch time. The two exports must use the same
-end-effector variant and the same kinematic calibration file, otherwise
-the solver optimises for one robot and the bridge evaluates the policy
-on another. The visualisation, in contrast, takes its model from the
+description at launch time~\cite{Carpentier2019Pinocchio}. The two
+exports must use the same end-effector variant and the same kinematic
+calibration file, otherwise the solver optimises for one robot and the
+bridge evaluates the policy on another. The visualisation, in contrast, takes its model from the
 \texttt{robot\_state\_publisher} on the IPC, which is the single
 authoritative source of \texttt{/tf} and \texttt{/robot\_description};
 the workstation launch deliberately starts no second publisher. Because
@@ -251,11 +254,12 @@ are then cached on disk.
 
 \ocs{} ships a mobile-manipulator model family, of which the
 \emph{wheel-based} variant matches \hero{}: a non-holonomic planar base
-carrying a serial arm. The Pinocchio model is built from the platform
-URDF with the two wheel joints declared fixed, since the wheels are not
-part of the kinematic chain from base to \ee{} and their rotation is
-irrelevant to the task. The base frame is \texttt{footprint} and the
-\ee{} frame is \texttt{tool0}, as introduced in
+carrying a serial arm~\cite{ocs2Toolbox}. The Pinocchio model is built
+from the platform URDF with the two wheel joints declared fixed, since
+the wheels are not part of the kinematic chain from base to \ee{} and
+their rotation is irrelevant to the
+task~\cite{Carpentier2019Pinocchio}. The base frame is \texttt{footprint}
+and the \ee{} frame is \texttt{tool0}, as introduced in
 \cref{sec:hero-platform}. The resulting state and input are
 
 \begin{equation}
@@ -269,7 +273,7 @@ with $(p_x, p_y, \psi)$ the base pose in the inertial frame,
 $\qarm \in \mathbb{R}^{6}$ the arm joint positions, $v$ and $\omega$ the
 base forward and yaw rate, and $\qarmdot$ the arm joint velocities.
 The system equation is the differential-drive kinematics augmented by
-the arm joints,
+the arm joints~\cite{Lynch2017ModernRobotics},
 
 \begin{equation}
   \dot{\svec} \;=\; f(\svec, \uvec) \;=\;
@@ -328,7 +332,8 @@ returns to this ratio, because it also determines whether the base
 starts moving early enough for paths that leave the arm's workspace.
 
 Limits and self-collision enter as relaxed barrier penalties, the
-standard \ocs{} treatment of an inequality $h(\svec,\uvec) \ge 0$:
+\ocs{} treatment of an inequality
+$h(\svec,\uvec) \ge 0$~\cite{Feller2017RelaxedBarrier,ocs2Toolbox}:
 
 \begin{equation}
   B(h) =
@@ -360,7 +365,7 @@ The velocity bounds are \qty{\pm 0.1}{\meter\per\second} and
 \qty{\pm 0.3}{\radian\per\second} per arm joint, matching the caps that
 the bridge enforces downstream (\cref{sec:hw-interfaces}).
 
-Self-collision deserves a remark, because its evaluation cost scales
+Self-collision is singled out here because its evaluation cost scales
 with the number of geometry pairs and it was therefore the first term
 addressed when solve time had to be reduced. The platform carries tube
 holders and instrument rings on the arm links, and a naive enumeration
@@ -375,10 +380,11 @@ separate file and can be visualised for inspection.
 
 The solver settings and the horizon are collected in
 \cref{tab:mpc-config}. Three of them interact and are worth spelling
-out. Only one SLQ iteration per solve is allowed: with a
-\qty{1.2}{\second} horizon and a re-solve every \qty{100}{\milli\second}
-the previous solution is a good initial guess, so a second iteration
-buys little and doubles the solve time. The policy that the solver
+out. Only one SLQ iteration per solve is
+allowed~\cite{Farshidian2017SLQ}: with a \qty{1.2}{\second} horizon and a
+re-solve every \qty{100}{\milli\second} the previous solution is already
+a usable initial guess, so a second iteration adds little tracking
+benefit relative to the doubled solve time. The policy that the solver
 publishes is declared valid for a \emph{solution time window} of
 \qty{1.0}{\second}, shorter than the horizon; the bridge holds the robot
 once a policy is exhausted rather than extrapolating it
@@ -439,7 +445,8 @@ session and is the quantity that governs the failure mode analysed in
 Derivatives are not written by hand. \ocs{} traces the cost terms, the
 constraints and the system equation with CppAD and compiles the
 resulting derivative code into shared libraries on first use, which is
-the delay mentioned in \cref{sec:distributed-arch}. The cache is keyed
+the delay mentioned in
+\cref{sec:distributed-arch}~\cite{CppAD,ocs2Toolbox}. The cache is keyed
 by the model, not by the tuning: changing the kinematic model, the fixed
 joints or the collision pair list invalidates it and requires a
 regeneration, whereas changing a weight, a limit or the horizon takes
@@ -453,8 +460,8 @@ configuration file suggests otherwise.
 
 The MRT bridge is the only component written specifically for this
 deployment. It closes the loop between the \ocs{} policy and
-\texttt{ros2\_control}~\cite{ros2control}, and it runs at
-\qty{100}{\hz} on the IPC.
+\texttt{ros2\_control}, and it runs at \qty{100}{\hz} on the
+IPC~\cite{ros2control}.
 
 Each cycle begins with an observation. The base pose $(p_x, p_y, \psi)$
 is taken from the drive controller's odometry, with the yaw extracted
@@ -483,24 +490,26 @@ The base command is the first two elements of the optimised input,
 published as a stamped twist on \texttt{/cmd\_vel\_ocs2} rather than
 directly on the drive controller's command topic. A \texttt{twist\_mux}
 arbitrates between sources by priority, with manual teleoperation above
-\ocs{}, so an operator can always override or stop a
+\ocs{}, so a higher-priority teleoperation source preempts or stops a
 \qty{400}{\kilo\gram} platform that is executing an optimised
-trajectory. The published twist is clamped to the same base velocity
-bounds that the optimisation uses as a soft constraint; the clamp is the
-hard backstop for the case where the soft constraint is violated.
+trajectory~\cite{twistMux}. The published twist is clamped to the same
+base velocity bounds that the optimisation uses as a soft constraint; the
+clamp is the hard backstop for the case where the soft constraint is
+violated.
 
-The arm command needs more care, because the joint-trajectory controller
-accepts a position setpoint over its topic interface without enforcing
-any velocity limit. The bridge samples the optimised arm state
-\qty{0.6}{\second} ahead and publishes it as a single trajectory point
-with that time from start, but it first clamps each joint's step to
+The arm command needs additional handling, because the joint-trajectory
+controller accepts a position setpoint over its topic interface without
+enforcing any velocity limit~\cite{ros2control}. The bridge samples the
+optimised arm state \qty{0.6}{\second} ahead and publishes it as a single
+trajectory point with that time from start, but it first clamps each
+joint's step to
 $\dot{q}_\mathrm{max} \cdot t_\mathrm{preview} = \qty{0.18}{\radian}$
 around the currently measured position. Because the next cycle repeats
 the computation \qty{10}{\milli\second} later, the arm still advances
 towards the target, at a rate bounded by
 \qty{0.3}{\radian\per\second}. When the clamp engages, the bridge warns;
-frequent warnings mean the optimised state is jumping between solves,
-which turned out to be a useful diagnostic and is taken up in
+frequent warnings indicate that the optimised state is jumping between
+solves, which later proved useful as a diagnostic and is taken up in
 \cref{sec:hw-challenges}.
 
 Whenever the bridge cannot produce a trustworthy command it publishes a

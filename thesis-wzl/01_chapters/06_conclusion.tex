@@ -5,7 +5,7 @@
 This chapter closes the thesis by returning to the objective of
 \cref{sec:objectives}: integrate whole-body \mpc{} on the physical
 \hero{} platform and characterise its \ee{}-tracking behaviour. The
-preceding chapters have already separated what the optimiser does on its
+preceding chapters already separate what the optimiser does on its
 kinematic model (\cref{ch:simulation}), what the MRT bridge adds
 (\cref{sec:hw-challenges}), and what the plant adds on top
 (\cref{sec:hw-results}). What follows is a concise account of what was
@@ -64,15 +64,18 @@ joint encoders inside the waypoint node (\cref{sec:sim-metrology}), so
 the scores measure internal consistency of the closed loop, not absolute
 accuracy in the hall. Each plant was exercised once, at
 $v_{\mathrm{ref}}=\qty{0.05}{\meter\per\second}$, without the three
-mandatory ISO speed levels or repeated cycles. The workstation was
-connected by Ethernet throughout (\cref{sec:hw-deployment}); the numbers
-therefore do not speak to control over the platform's wireless link. The
-\ocs{} model treats the base as a velocity integrator and knows nothing
-of the drive controller's acceleration limit or of the UR10e following
-error under streaming position control. Finally, no decoupled Nav2 plus
-MoveIt baseline was run on the same path, so the thesis validates
-whole-body execution and characterises its residual; it does not yet
-demonstrate superiority over sequential planning on identical metrics.
+mandatory ISO speed levels or repeated cycles~\cite{ISO9283}. The
+workstation was connected by Ethernet throughout
+(\cref{sec:hw-deployment}); the numbers therefore do not speak to
+control over the platform's wireless link. The \ocs{} model treats the
+base as a velocity integrator and knows nothing of the drive
+controller's acceleration limit or of the UR10e following error under
+streaming position
+control~\cite{HenkelRoth2019freeMoVe,UR10e}. Finally, no decoupled
+Nav2 plus MoveIt baseline was run on the same path, so the thesis
+validates whole-body execution and characterises its residual; it does
+not yet demonstrate superiority over sequential planning on identical
+metrics~\cite{Macenski2020Nav2,moveit2}.
 
 % ---------------------------------------------------------------------
 \section{Critical Reflection}
@@ -154,9 +157,9 @@ and revisiting the twelve-pair self-collision set if distance queries
 still dominate are practical first steps. Enabling a feedback policy
 (\texttt{useFeedbackPolicy=true} in the task file; currently disabled in
 \cref{tab:mpc-config}) would let the bridge use linear gains between
-sparse policy updates; the trade-off is larger policy messages over
-Zenoh, which must be measured on the link that will actually be used in
-production. Widening $T_{\mathrm{sol}}$ further, as in the Experiment~A
+sparse policy updates~\cite{Grandia2019FeedbackMPC,ocs2Toolbox}; the
+trade-off is larger policy messages over Zenoh, which must be measured on
+the link that will actually be used in production. Widening $T_{\mathrm{sol}}$ further, as in the Experiment~A
 file, prevents exhaustion when a solve spikes; it does not restore the
 aggressive $\tau=0$ input that lag already consumes (\cref{fig:hw-lag}).
 
@@ -166,32 +169,36 @@ the arm holds orientation, and it does not relax when the reference stops.
 Adding an acceleration limit or a first-order lag on base velocities
 inside the \ocs{} model would align the optimiser with what the
 freeMoVe drive stack enforces and reduce the state mismatch that each
-re-solve inherits. A complementary experiment---base motion on a closed
-planar path with the \ee{} held fixed in space, the converse of
-Experiment~A---would separate base tracking from arm-dominated edges
-without changing the software architecture.
+re-solve inherits~\cite{HenkelRoth2019freeMoVe}. A complementary
+experiment---base motion on a closed planar path with the \ee{} held
+fixed in space, the converse of Experiment~A---would separate base
+tracking from arm-dominated edges without changing the software
+architecture.
 
 \paragraph{Improve pose estimation and external metrology.}
 If odometry drift dominates closed-loop drift, fusing wheel odometry
-with additional proprioceptive or exteroceptive sources through an EKF
-(for example \texttt{robot\_localization}) is the standard next step; the
-present pipeline uses raw wheel odometry only (\cref{sec:hero-platform}).
-For claims that must survive examination against ISO~9283, an independent
-\ee{} pose remains mandatory. Ground-truth capture would also break the
-confounding between desired and attained frames noted in
+with additional proprioceptive or exteroceptive sources through an
+extended Kalman filter (for example the \texttt{robot\_localization}
+package) is a direct next step; the present pipeline uses raw wheel
+odometry only
+(\cref{sec:hero-platform})~\cite{Moore2015RobotLocalization}. For claims
+that must survive examination against ISO~9283, an independent \ee{} pose
+remains mandatory~\cite{ISO9283}. Ground-truth capture would also break
+the confounding between desired and attained frames noted in
 \cref{sec:sim-metrology}.
 
 \paragraph{Complete the evaluation programme.}
 Three items would turn the present characterisation into a comparative
 study aligned with \cref{sec:objectives}. A decoupled Nav2 plus MoveIt
 baseline on the same corner set would supply $\mathrm{AP}_{p}$ and task
-time on common footing (\cref{sec:sim-path-metrics}). ISO Table~3 speed
-levels and $n\ge 3$ cycles on the whole-body pipeline would populate
-$\mathrm{AT}_{p}$ and $\mathrm{RT}_{p}$. Re-running the mock versus
-hardware comparison over a wireless Zenoh link would test whether the
-Ethernet sessions of \cref{sec:hw-deployment} bias the timing budget
-optimistically. Until those pieces exist, the defensible statement is the
-one \cref{sec:hw-results} already makes: the Experiment~A files execute
-on hardware; mock hardware tracks at centimetre scale with lag consistent
-with policy delay; the physical platform does not, and the gap is not
-explained by solver failure alone.
+time on common footing
+(\cref{sec:sim-path-metrics})~\cite{Macenski2020Nav2,moveit2}. ISO
+Table~3 speed levels and $n\ge 3$ cycles on the whole-body pipeline would
+populate $\mathrm{AT}_{p}$ and $\mathrm{RT}_{p}$~\cite{ISO9283}.
+Re-running the mock versus hardware comparison over a wireless Zenoh link
+would test whether the Ethernet sessions of \cref{sec:hw-deployment} bias
+the timing budget optimistically~\cite{zenoh}. Until those pieces exist,
+the defensible statement is the one \cref{sec:hw-results} already makes:
+the Experiment~A files execute on hardware; mock hardware tracks at
+centimetre scale with lag consistent with policy delay; the physical
+platform does not, and the gap is not explained by solver failure alone.

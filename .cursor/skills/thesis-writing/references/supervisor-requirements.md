@@ -187,7 +187,6 @@ automated Zotero/Better BibTeX export — keep automated exports in a separate
 - **Splitting Chapter 3** ("beefy chapter, might consider splitting"). Structural;
   affects numbering and cross-references throughout. Not to be done without the
   author's decision.
-- **`\cite{treheux26}`** appeared in the supervisor's list of citation resources.
-  `Treheux2026TopicWBMP` exists in `References.bib` but is cited zero times;
-  most likely the supervisor expects the topic description to be cited, plausibly
-  in §1.3.1.
+- **`\cite{treheux26}` / `Bergs2024EdgeComputing`.** Author decision 2026-09-10:
+  do **not** insert these into the body; leave unused bib entries alone. Do not
+  re-raise unless the supervisor asks.

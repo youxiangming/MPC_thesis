@@ -9,11 +9,11 @@ odometry-plus-forward-kinematics estimate of where the robot is. A
 kinematic closed loop that replaces the bridge with an ideal rollout
 removes the last two, so a fault in the reference, the time axis or the
 cost function can be seen before it is blamed on the plant. That loop is
-the dummy MRT of \ocs{}. \Cref{sec:sim-methodology} states what it can
-show and defines the metrics used here and in \cref{ch:hardware}.
-\Cref{sec:sim-dummy} describes the closed \ee{} path that the dummy
-exercises and the checks that a session must pass before the same files
-are taken to the robot.
+the dummy MRT of \ocs{}~\cite{ocs2Toolbox}. \Cref{sec:sim-methodology}
+states what it can show and defines the metrics used here and in
+\cref{ch:hardware}. \Cref{sec:sim-dummy} describes the closed \ee{} path
+that the dummy exercises and the checks that a session must pass before
+the same files are taken to the robot.
 
 % ---------------------------------------------------------------------
 \section{Validation Methodology and Evaluation Metrics}
@@ -25,26 +25,27 @@ node and the production target publisher, closed through
 (\cref{sec:hw-interfaces}). The dummy integrates the latest policy with
 the same kinematic rollout the solver uses, at the configured MRT rate of
 \qty{100}{\hz}, and feeds the resulting state back as the next
-observation. There is no policy-evaluation lag, no actuator dynamics, and
-no wheel-odometry drift. The \ee{} error that remains is the optimiser's
-residual against its own model: input costs and velocity limits prevent a
-perfect match to the interpolated reference, and a finite horizon cannot
-see the whole path.
+observation~\cite{ocs2Toolbox}. There is no policy-evaluation lag, no
+actuator dynamics, and no wheel-odometry drift. The \ee{} error that
+remains is the optimiser's residual against its own model: input costs
+and velocity limits prevent a perfect match to the interpolated
+reference, and a finite horizon cannot see the whole
+path~\cite{Rawlings2017MPC,Mayne2000Constrained}.
 
-That residual is useful. If the dummy already leaves the commanded path,
-the later hardware error is not an execution problem. If the dummy
+That residual is diagnostic. If the dummy already leaves the commanded
+path, the later hardware error is not an execution problem. If the dummy
 tracks and the hardware does not, the gap is in the bridge, the
 actuators, or the state estimate, which is the comparison drawn in
-\cref{ch:hardware}. The dummy does not speak to real-time behaviour on
+\cref{ch:hardware}. The dummy does not address real-time behaviour on
 the IPC: solve time, policy exhaustion and the observation-age guard
 never appear, because the observation is produced in the same process
 tree as the solver.
 
 A second simulated-hardware mode exists in the \hero{} stack: mock
 \texttt{ros2\_control} interfaces that echo commands into states while
-still running the MRT bridge~\cite{ros2control}. That mode keeps the
-timing and clamping of \cref{sec:hw-interfaces} and is used as a
-stepping stone onto the physical platform. It is not the subject of this
+still running the MRT bridge. That mode keeps the timing and clamping of
+\cref{sec:hw-interfaces} and is used as a stepping stone onto the
+physical platform~\cite{ros2control}. It is not the subject of this
 chapter.
 
 \subsection{Internal metrology}
@@ -56,9 +57,10 @@ interpolation of the commanded knots at \texttt{observation.time}, which
 is the interpolation \ocs{} itself uses for the position part of the
 reference. The attained pose is Pinocchio forward kinematics of that
 observation, with \texttt{tool0} as the \ee{} frame
-(\cref{sec:hero-platform}). The error signal therefore carries no
-cross-topic time-alignment residual. The node publishes it at
-\qty{20}{\hz} on \texttt{/ee\_waypoint\_target/ee\_metrics}.
+(\cref{sec:hero-platform})~\cite{Carpentier2019Pinocchio}. The error
+signal therefore carries no cross-topic time-alignment residual. The
+node publishes it at \qty{20}{\hz} on
+\texttt{/ee\_waypoint\_target/ee\_metrics}.
 
 On the dummy this is a consistent kinematic measurement. On hardware the
 same pipeline reconstructs the \ee{} from wheel odometry and joint
@@ -88,11 +90,11 @@ The position and orientation errors used throughout are
 where $(w,\symbf{v})$ are the scalar and vector parts of
 $q_\mathrm{d}\,q_\mathrm{a}^{-1}$ and $e_{\mathrm{o}}$ is folded into
 $[0,\pi]$ so that the quaternion double cover does not appear as a
-$2\pi$ jump. On a measured edge of the path the position error is split
-into an along-track component $e_{\parallel} = \symbf{e}\cdot\symbf{\tau}$
-and a cross-track remainder $e_{\perp} = \lVert \symbf{e} -
-e_{\parallel}\,\symbf{\tau} \rVert$, with $\symbf{\tau}$ the unit
-tangent of that edge. The ratio
+$2\pi$ jump~\cite{Lynch2017ModernRobotics}. On a measured edge of the path
+the position error is split into an along-track component
+$e_{\parallel} = \symbf{e}\cdot\symbf{\tau}$ and a cross-track remainder
+$e_{\perp} = \lVert \symbf{e} - e_{\parallel}\,\symbf{\tau} \rVert$, with
+$\symbf{\tau}$ the unit tangent of that edge. The ratio
 \begin{equation}
   t_{\mathrm{lag}} = e_{\parallel} / v_{\mathrm{ref}}
   \label{eq:lag-eff}
@@ -122,10 +124,12 @@ clock and a speed profile. That is true for the \ocs{} loop, where the
 reference is a time-parameterised \texttt{TargetTrajectories} message.
 It is not true of a decoupled Nav2 plus MoveIt baseline, which would
 reach the same corners with a different velocity profile and with
-pauses while the base repositions. A later comparison of the two
+pauses while the base
+repositions~\cite{Macenski2020Nav2,moveit2}. A later comparison of the two
 pipelines therefore needs a metric that treats the command as a
 geometric path, not as a trajectory. The (symmetric) Hausdorff distance
-between the commanded point set $A$ and the attained point set $B$ is
+between the commanded point set $A$ and the attained point set $B$
+is~\cite{Huttenlocher1993Hausdorff}
 \begin{equation}
   h(A,B) = \max_{a \in A} \min_{b \in B} \lVert a-b \rVert,
   \qquad
@@ -136,7 +140,9 @@ The directed distance $h(B,A)$ is small whenever every attained sample
 lies near the command, including the degenerate case of a robot that
 stops halfway; $h(A,B)$ penalises shortcuts and unfinished laps. Both
 directions are required. The classical $\max$ is sensitive to a single
-spike, so results are reported as the symmetric mean
+spike, so results are also reported with a mean nearest-neighbour form
+in the spirit of the modified Hausdorff
+distance~\cite{Dubuisson1994ModifiedHausdorff},
 \begin{equation}
   \overline{H}(A,B)
     = \frac{1}{2|A|}\sum_{a\in A}\min_{b\in B}\lVert a-b \rVert
@@ -159,9 +165,10 @@ $\mathrm{AP}_{p}$ (cl.~7.2.1) is the distance from each commanded corner
 to the barycentre of the attained poses at that corner; it is the
 fair common metric once a decoupled baseline exists, because that
 baseline has no continuous rectangular path to score with
-$\mathrm{AT}_{p}$. Cycle counts and the three mandatory speed levels of
-ISO Table~3 are not exercised in this chapter. One slow lap on the dummy
-is a pipeline check, not an ISO test.
+$\mathrm{AT}_{p}$~\cite{ISO9283}. Cycle counts and the three mandatory
+speed levels of ISO Table~3 are not exercised in this
+chapter~\cite{ISO9283}. One slow lap on the dummy is a pipeline check,
+not an ISO test.
 
 Task completion time, the wall-clock duration of the measured lap, is
 recorded alongside the geometric scores. Hausdorff distance ignores
@@ -178,7 +185,8 @@ offline from the same bag export that \cref{ch:hardware} uses.
     Metrics used in the closed-path experiments. Dummy sessions produce
     the first two rows as a planner residual. Hausdorff distance and
     $\mathrm{AT}_{p}$ are evaluated offline on samples with
-    $\texttt{segment\_id} \ge 1$.}
+    $\texttt{segment\_id} \ge 1$. Clause labels for $\mathrm{AT}_{p}$ and
+    $\mathrm{AP}_{p}$ follow ISO~9283~\cite{ISO9283}.}
   \label{tab:sim-metrics}
   \begin{tabularx}{\linewidth}{@{}lXl@{}}
     \toprule
@@ -293,7 +301,7 @@ without demanding a $2\,\mathrm{m}$ translation on every lap. The
 standby joint vector written in \texttt{task\_experiment\_a.info} (dummy
 only; the hardware bridge ignores it) is the MoveIt named state
 \texttt{bent}: shoulder pan, lift, elbow and wrist~1 at \ang{-90},
-wrist~2 at \ang{+90}, wrist~3 at zero.
+wrist~2 at \ang{+90}, wrist~3 at zero~\cite{moveit2}.
 
 The visit order is a Hamiltonian cycle on the eight corners in which
 every consecutive pair differs in a single coordinate:
@@ -382,7 +390,8 @@ $e_{\mathrm{o}}$ that is not the controller's.
     Commanded parallelepiped in the \ee{}-anchored frame of
     \texttt{experiment\_a\_waypoints.yaml}. Blue arrows are the
     measured Hamiltonian cycle (segment identifiers $1$--$8$). The
-    orange stub is the ISO~8.2 lead-in; the lead-out continues
+    orange stub is the ISO~9283 cl.~8.2 lead-in~\cite{ISO9283}; the
+    lead-out continues
     \qty{0.15}{\meter} down from P1 along the closing $z$ edge and is
     omitted here.}
   \label{fig:sim-box}
@@ -434,7 +443,7 @@ lap add \qty{14}{\second}, before lead-in and lead-out. A dwell of zero would
 be the ISO path-accuracy mode (constant speed through corners). The
 value used here is a pose-accuracy setting: the \ee{} is given time to
 settle so that a later $\mathrm{AP}_{p}$ is not dominated by a corner
-cut.
+cut~\cite{ISO9283}.
 
 After \texttt{/start} the node does not immediately run the cycle. It
 lands the box once, holds the reference at the lead-in point, and waits
@@ -448,14 +457,14 @@ phase sequence is $\mathrm{Init}\to\mathrm{Hold}\to
 service call starts the motion after a visual check.
 
 ISO~9283 cl.~8.2 requires the programmed start and end to lie outside
-the test path. A lead-in of \qty{0.15}{\meter} is placed on the backward
-extension of P1--P2, and a lead-out of \qty{0.15}{\meter} on the tangent
-of the closing edge. With the present Hamiltonian order that closing
-edge is the downward $z$ leg, so the lead-out ends at
-$z=\qty{1.15}{\meter}$. The dummy RViz configuration draws those legs
-in orange for exactly this reason: a lead-out that would enter the
-chassis is visible before anyone calls start. Returning to the standby
-pose after the lead-out is switched off for this path
+the test path~\cite{ISO9283}. A lead-in of \qty{0.15}{\meter} is placed
+on the backward extension of P1--P2, and a lead-out of
+\qty{0.15}{\meter} on the tangent of the closing edge. With the present
+Hamiltonian order that closing edge is the downward $z$ leg, so the
+lead-out ends at $z=\qty{1.15}{\meter}$. The dummy RViz configuration
+draws those legs in orange for exactly this reason: a lead-out that
+would enter the chassis is visible before anyone calls start. Returning
+to the standby pose after the lead-out is switched off for this path
 (\texttt{return\_to\_home: false}).
 
 The trajectory is re-published at \qty{1}{\hz}. Re-sending the same

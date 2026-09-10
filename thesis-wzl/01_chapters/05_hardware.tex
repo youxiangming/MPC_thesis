@@ -18,8 +18,9 @@ timing and model problems that show up once the bridge is in the loop.
 \Cref{sec:hw-results} compares one mock lap with one hardware lap on the
 eight-corner path of \cref{fig:sim-box}, using the metrics of
 \cref{tab:sim-metrics}. Both traces are internal metrology
-(\cref{sec:sim-metrology}). A single slow lap is not an ISO~9283 test,
-and it is not yet a comparison with a decoupled baseline.
+(\cref{sec:sim-metrology}). A single slow lap is not an ISO~9283
+test~\cite{ISO9283}, and it is not yet a comparison with a decoupled
+baseline.
 
 % ---------------------------------------------------------------------
 \section{Deployment on the \hero{} Platform}
@@ -199,9 +200,10 @@ only because a session that skips those checks never produces a bag.
 The remaining limitation is the model. Mock hardware realises the
 integrator: commanded wheel and joint rates appear in the next
 observation. The physical base is a \qty{400}{\kilo\gram} platform whose
-drive controller enforces its own acceleration limit, and the UR10e in
-streaming position control has a following error that the kinematic
-model does not know. Every re-solve on the robot therefore starts from a
+drive controller enforces its own acceleration
+limit~\cite{HenkelRoth2019freeMoVe}, and the UR10e in streaming position
+control has a following error that the kinematic model does not
+know~\cite{UR10e}. Every re-solve on the robot therefore starts from a
 state the previous plan did not expect. That is a different problem from
 a slow solver, and \cref{sec:hw-results} is mostly about it.
 
@@ -230,7 +232,7 @@ the leftward horizontal edge. The vertical edges of the box collapse in
 this view; they remain in the error signals. On the mock the attained
 path follows the rectangle with a lag that is visible mainly as a
 short-cut at the corners. On the robot the attained path is a rounded,
-inward-offset copy of the same rectangle, with a systematic bias of
+inward-offset copy of the same rectangle, with a consistent bias of
 order \qty{10}{\centi\meter} rather than a delay that stays on the
 line.
 
@@ -472,7 +474,8 @@ loop-closure error. None of this is an ISO accuracy statement; an
 external \ee{} pose is still missing. Second, each plant was run once, at
 one speed, without a decoupled baseline. Repeatability $\mathrm{RT}_{p}$,
 the three speed levels of ISO Table~3, and a Nav2 plus MoveIt comparison
-are outside the present data.
+are outside the present
+data~\cite{ISO9283,Macenski2020Nav2,moveit2}.
 
 What the pair of laps does show is narrower. The Experiment~A files that
 the dummy accepted can be executed by the hardware stack from approaching
