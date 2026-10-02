@@ -32,6 +32,32 @@ bus. The arm is mounted \qty{0.830}{\meter} above the ground on a plate
 offset by \qty{-0.355}{\meter} in $x$ and \qty{-0.050}{\meter} in $y$
 from the base origin and rotated by \ang{-90} about the vertical axis,
 so that the shoulder sits roughly at the height of a workpiece carrier.
+\Cref{fig:hero-photo} shows the platform from the front and from the
+rear.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[height=9cm]{hero_photo_front.jpg}
+    \caption{Front side with the arm, the teach pendant on the top
+      plate and the red drive unit of the base.}
+    \label{fig:hero-photo-front}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[height=9cm]{hero_photo_rear.jpg}
+    \caption{Rear side with the operator panel next to the shoulder and
+      the UR control box inside the chassis.}
+    \label{fig:hero-photo-rear}
+  \end{subfigure}
+  \caption{The \hero{} platform: UR10e arm on the \emph{freeMoVe} base.
+    The operator panel in (b) is the \texttt{hmi} link of the kinematic
+    description and one of the two platform parts that the arm can
+    reach (\cref{sec:wholebody-model}).}
+  \label{fig:hero-photo}
+\end{figure}
 
 Two properties of this combination shape the control problem. The first
 is the drive geometry: the base pose has three planar degrees of freedom
@@ -54,6 +80,90 @@ orientation shown on the teach pendant; the arm's own
 respect to the pendant convention and would invite sign errors when
 comparing commanded and measured poses.
 
+\Cref{fig:hero-frames} shows the tree, the frames it defines and the
+state components attached to them.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=3pt, minimum height=6.5mm, minimum width=23mm},
+      passive/.style={box, fill=gray!12},
+      ctrl/.style={box, draw=RWTHOrange100, thick},
+      lbl/.style={font=\scriptsize, align=left},
+      jt/.style={font=\scriptsize, align=center, inner sep=1.5pt},
+      flow/.style={-{Latex[length=1.8mm]}, thick},
+      note/.style={-{Latex[length=1.4mm]}, gray},
+    ]
+    % --- trunk ------------------------------------------------------
+    \node[box]  (fp) at (0,0)     {\texttt{footprint}};
+    \node[box]  (ch) at (0,-1.5)  {\texttt{chassis}};
+    \node[box]  (mt) at (0,-3.4)  {\texttt{ur\_mount}};
+    \node[box]  (bl) at (0,-4.7)  {\texttt{base\_link}};
+    \node[box, minimum width=50mm] (ar) at (0,-6.2)
+      {\texttt{shoulder\_link} $\to \cdots \to$ \texttt{wrist\_3\_link}};
+    \node[ctrl] (t0) at (0,-7.7)  {\texttt{tool0}};
+
+    % --- passive branches, all children of chassis -------------------
+    \node[passive] (wh) at (4.9,-0.6) {\texttt{wheel\_left}\\\texttt{wheel\_right}};
+    \node[passive] (cs) at (4.9,-2.0) {$4 \times$ caster};
+    \node[passive] (hm) at (4.9,-3.1) {\texttt{hmi}};
+
+    % --- trunk edges ------------------------------------------------
+    \draw[flow] (fp) -- (ch) node[jt, midway, right=1mm] {fixed, identity};
+    \draw[flow] (ch) -- (mt);
+    \draw[flow] (mt) -- (bl) node[jt, midway, right=1mm] {fixed};
+    \draw[flow] (bl) -- (ar) node[jt, midway, right=1mm] {6 revolute joints};
+    \draw[flow] (ar) -- (t0) node[jt, midway, right=1mm] {fixed};
+
+    % --- branch edges -----------------------------------------------
+    \draw[flow] (ch.east) -- (wh.west) node[jt, pos=0.55, above, sloped] {continuous};
+    \draw[flow] (ch.east) -- (cs.west);
+    \draw[flow] (ch.east) -- (hm.west);
+
+    % --- left-hand annotations --------------------------------------
+    \node[lbl, anchor=east, text width=31mm] (npose) at (-2.2,0)
+      {$(p_x, p_y, \psi)$: base pose\\in the inertial frame};
+    \draw[note] (npose.east) -- (fp.west);
+
+    \node[jt, anchor=east, align=right] at (-0.5,-2.45)
+      {fixed,\\$(-0.355,\; -0.050,\; 0.830)\,\si{\meter}$,\\$R_z(\ang{-90})$};
+
+    \node[lbl, anchor=east] (narm) at (-3.2,-6.2) {$\qarm \in \mathbb{R}^{6}$};
+    \draw[note] (narm.east) -- (ar.west);
+
+    % --- right-hand annotations -------------------------------------
+    \node[lbl, anchor=west, text width=31mm] (nwh) at (6.3,-0.6)
+      {declared \emph{fixed} in the\\Pinocchio model};
+    \draw[note] (nwh.west) -- (wh.east);
+
+    \node[lbl, anchor=west, text width=40mm] (nt0) at (2.0,-7.7)
+      {controlled \ee{} frame;\\\texttt{base\_link} is not used\\as reference};
+    \draw[note] (nt0.west) -- (t0.east);
+
+    % --- footprint axes ---------------------------------------------
+    \begin{scope}[shift={(-1.95,1.05)}]
+      \draw[-{Latex[length=1.4mm]}] (0,0) -- (0.75,0) node[right, font=\scriptsize] {$x$};
+      \draw[-{Latex[length=1.4mm]}] (0,0) -- (0,0.75) node[above, font=\scriptsize] {$z$};
+      \draw[-{Latex[length=1.4mm]}] (0,0) -- (-0.45,-0.45)
+        node[below left, font=\scriptsize, inner sep=1pt] {$y$};
+    \end{scope}
+  \end{tikzpicture}
+  \caption[Kinematic tree and frame convention of \hero{}]{%
+    Kinematic tree of \hero{} as the Pinocchio model sees it, with the
+    transforms read from the platform description. The frame
+    \texttt{footprint} lies on the ground plane midway between the drive
+    wheels, at a track of \qty{0.548}{\meter} and a wheel radius of
+    \qty{0.08}{\meter}. Shaded links carry no optimised degree of
+    freedom: the two wheel joints are declared fixed, because the wheels
+    are not part of the chain from base to \ee{}, and the casters and the
+    operator panel are fixed in the description itself. The nine state
+    components of \cref{eq:state-input} are attached to
+    \texttt{footprint} and to the six revolute arm joints.}
+  \label{fig:hero-frames}
+\end{figure}
+
 Beyond the drives, the platform carries five SICK safety laser scanners,
 two safety controllers, wheel brakes, and an operator panel. None of
 these enters the \mpc{} loop. The controller described here consumes
@@ -66,7 +176,7 @@ is (\cref{sec:wholebody-model}).
 Computation is split over two machines on the robot's own
 \texttt{192.168.12.0/24} subnet. An industrial PC (IPC) inside the
 platform hosts the ROS~2 Jazzy control stack in a container and reaches
-the arm controller over the same subnet; an external workstation joins
+the arm controller over the same subnet; an external PC joins
 the subnet either by cable or through the platform's wireless access
 point~\cite{ROS2,Macenski2022ROS2}. Which software runs where is the
 subject of the next section.
@@ -76,86 +186,84 @@ subject of the next section.
 \label{sec:distributed-arch}
 
 Solving the optimal-control problem is the most expensive part of the
-loop relative to the remaining nodes on the IPC, and the on-board IPC is
-a small machine. Running the solver there would have forced a shorter
-horizon or a coarser model. The MPC--MRT split of \ocs{}
+loop relative to the remaining nodes on the IPC, and the IPC has a
+quarter of the hardware threads of the external PC. The IPC carries an
+Intel Core i5-6300U with two cores and four threads and
+\qty{7.7}{\giga\byte} of memory, runs a kernel without real-time
+patches, and keeps the CPU frequency governor at \texttt{powersave}. The
+external PC carries an AMD Ryzen~7 7840HS with eight cores and sixteen
+threads. The solver alone is configured for eight threads
+(\cref{tab:mpc-config}), twice what the IPC offers before the control
+chain takes its share, so the solver is placed on the external PC. The
+MPC--MRT split
+of \ocs{}
 (\cref{sec:sota-ocs2}) offers a way out: the optimiser and the client
 that evaluates its policy are separate processes that exchange messages,
-so they may live on different machines~\cite{ocs2Toolbox}. Two
-deployments were implemented on this basis, and both are kept in the
-repository because they fail in different ways.
+so they may live on different machines~\cite{ocs2Toolbox}.
 
-In the \emph{split} deployment, which is the one used for the
-experiments, the workstation runs the \mpc{} node, the target-generating
+The deployment used here places them on either side of the machine
+boundary. The external PC runs the \mpc{} node, the target-generating
 node and the visualisation, while the IPC runs the low-level control
 chain and the MRT bridge. The fast path---measure, evaluate the policy,
 actuate---is then entirely local to the IPC, and only three \ocs{}
-streams cross the machine boundary. In the \emph{integrated} deployment,
-\mpc{} and MRT both run on the workstation and the IPC is reduced to a
-controller host, which moves the raw control traffic onto the network
-instead. \Cref{tab:topology-streams} contrasts the two.
+streams cross the machine boundary. \Cref{tab:topology-streams} lists
+what runs where and what the network carries.
 
 \begin{table}[htbp]
   \centering
-  \caption[Traffic crossing the machine boundary per deployment]{%
-    Traffic crossing the workstation--IPC boundary in the two
-    deployments. Only the split deployment keeps the actuation path
-    machine-local.}
+  \caption[Process placement and traffic across the machine boundary]{%
+    Process placement and the traffic that crosses the external
+    PC--IPC boundary. Keeping the MRT bridge on the IPC is what leaves
+    the actuation path machine-local.}
   \label{tab:topology-streams}
-  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+  \begin{tabularx}{\linewidth}{@{}lX@{}}
     \toprule
-      & Split (used here) & Integrated \\
-    \midrule
-    Workstation
-      & \mpc{} node, target node, RViz
-      & \mpc{} node, MRT bridge, target node, RViz \\
+    External PC
+      & \mpc{} node, target node, RViz \\
     IPC
-      & control chain, MRT bridge
-      & control chain \\
+      & control chain, MRT bridge \\
+    \addlinespace
     Crossing the network
-      & \texttt{\_mpc\_observation} (IPC\,$\rightarrow$\,workstation,
-        \qty{100}{\hz}), \texttt{\_mpc\_policy}
-        (workstation\,$\rightarrow$\,IPC), \texttt{\_mpc\_reset} service
-        at start-up
-      & odometry, \texttt{/joint\_states}, \texttt{/tf},
-        \texttt{/robot\_description} upstream; base twist and arm
-        trajectory downstream \\
+      & \texttt{\_mpc\_observation} (IPC\,$\rightarrow$\,external PC,
+        \qty{50}{\hz}), \texttt{\_mpc\_policy}
+        (external PC\,$\rightarrow$\,IPC), \texttt{\_mpc\_reset} service
+        at start-up \\
+    \addlinespace
     Effect of a link outage
       & the bridge keeps evaluating the last policy locally until its
-        validity window expires, then holds
-      & the base stops at the \qty{0.5}{\second} command timeout of the
-        drive controller \\
+        validity window expires, then holds \\
     Clock synchronisation
-      & not required
-      & mandatory \\
+      & not required \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-The clock requirement follows from where wall-clock times are compared.
+The last of those rows follows from where wall-clock times are compared.
 \ocs{} timestamps observations and policies on a relative time axis
 whose origin the bridge fixes at the first accepted measurement, so the
 \mpc{}--MRT exchange itself is insensitive to an offset between the two
 machine clocks. The bridge does compare wall-clock times in one place,
-its staleness check on incoming measurements, but in the split
-deployment the measurements and the check share the IPC clock. In the
-integrated deployment they do not: the workstation compares its own
-\texttt{now()} against IPC-stamped messages, and an offset larger than
-the \qty{0.2}{\second} staleness threshold makes every measurement look
-stale, which stops the robot. Chrony or an equivalent time service is
-therefore mandatory there and pointless in the split
-deployment~\cite{Chrony}.
+its staleness check on incoming measurements, and there the two operands
+share the IPC clock: the bridge runs on the IPC, and odometry and joint
+states are published by the control chain on the same machine. An offset
+to the external PC therefore never enters the \qty{0.2}{\second}
+staleness threshold, and a time service such as Chrony is not needed to
+keep the loop running~\cite{Chrony}. Chrony does run on the IPC, with
+the external PC as its reference; at the time of writing it reported an
+offset of \qty{-0.7}{\milli\second} at an RMS of
+\qty{1.5}{\milli\second}. That keeps logs recorded on the two machines
+comparable, but the control loop does not depend on it.
 
-Both deployments were run with the Zenoh middleware implementation rather
-than the default DDS transport of ROS~2. The switch was made during
+The deployment runs with the Zenoh middleware implementation rather than
+the default DDS transport of ROS~2. The switch was made during
 bring-up, after DDS discovery over the platform's wireless link had
 repeatedly failed to establish the \ocs{} streams; no side-by-side
 comparison of the two middlewares was recorded, so this is a deployment
 decision and not a measured result~\cite{zenoh,Macenski2022ROS2}.
 Zenoh requires a router process on each machine, with one router
-configured to connect to the other; the workstation router is pointed at
+configured to connect to the other; the external PC router is pointed at
 the IPC router. \Cref{fig:architecture} shows the resulting node and
-topic layout for the split deployment.
+topic layout.
 
 \begin{figure}[htbp]
   \centering
@@ -167,13 +275,13 @@ topic layout for the split deployment.
       flow/.style={-{Latex[length=2mm]}, thick},
       lbl/.style={font=\scriptsize, align=center},
     ]
-    % --- workstation ------------------------------------------------
+    % --- PC ------------------------------------------------
     \node[box, minimum width=30mm] (mpc)    at (0,0)
       {\mpc{} node\\(SLQ solver)};
     \node[box, minimum width=32mm] (target) at (-4.9,0)
       {target node\\(\ee{} reference)};
     \node[machine, fit=(mpc)(target),
-          label={[lbl]above:Workstation}] (host) {};
+          label={[lbl]above:external PC}] (host) {};
 
     % --- IPC --------------------------------------------------------
     \node[box, minimum width=34mm] (mrt)  at (0,-3.8)
@@ -192,7 +300,7 @@ topic layout for the split deployment.
 
     % --- cross-machine streams --------------------------------------
     \draw[flow] ([xshift=-7mm]mrt.north) -- ([xshift=-7mm]mpc.south)
-      node[lbl, pos=0.35, left=1mm] {observation\\\qty{100}{\hz}};
+      node[lbl, pos=0.35, left=1mm] {observation\\\qty{50}{\hz}};
     \draw[flow] ([xshift=7mm]mpc.south) -- ([xshift=7mm]mrt.north)
       node[lbl, pos=0.32, right=1mm] {policy};
 
@@ -212,12 +320,12 @@ topic layout for the split deployment.
     \draw[dotted, thick] (-7.3,-1.9) -- (3.0,-1.9);
     \node[lbl, anchor=west] at (-7.3,-2.15) {Zenoh network boundary};
   \end{tikzpicture}
-  \caption[Split deployment of \ocs{} on \hero{}]{%
-    Split deployment of \ocs{} on \hero{}. The workstation solves the
+  \caption[Deployment of \ocs{} on \hero{}]{%
+    Deployment of \ocs{} on \hero{}. The external PC solves the
     optimal-control problem; the IPC evaluates the resulting policy and
-    actuates the robot, so the loop that runs at \qty{100}{\hz} is
+    actuates the robot, so the loop that runs at \qty{50}{\hz} is
     machine-local. The reset service and the visualisation on the
-    workstation are omitted.}
+    external PC are omitted.}
   \label{fig:architecture}
 \end{figure}
 
@@ -230,16 +338,16 @@ calibration file, otherwise the solver optimises for one robot and the
 bridge evaluates the policy on another. The visualisation, in contrast, takes its model from the
 \texttt{robot\_state\_publisher} on the IPC, which is the single
 authoritative source of \texttt{/tf} and \texttt{/robot\_description};
-the workstation launch deliberately starts no second publisher. Because
+the external PC launch deliberately starts no second publisher. Because
 \ocs{} hardcodes \texttt{world} as its inertial frame while the robot
 tree is rooted at \texttt{odom}, an identity transform between the two
-is published on the workstation. The base state fed to the solver is
+is published on the external PC. The base state fed to the solver is
 wheel odometry, so \texttt{world} and \texttt{odom} coincide
 numerically; the price is that the controller inherits the drift of the
 odometry, and no external localisation corrects it.
 
 Start-up follows a fixed order: the Zenoh routers first, then the
-\mpc{} node on the workstation, then the IPC. The \mpc{} node advertises
+\mpc{} node on the external PC, then the IPC. The \mpc{} node advertises
 the reset service that the bridge needs for its initial handshake, so
 starting it first avoids a wait. The reverse order also converges,
 because the bridge waits for the service rather than aborting
@@ -285,13 +393,18 @@ the arm joints~\cite{Lynch2017ModernRobotics},
 
 which encodes the non-holonomic restriction of
 \cref{sec:hero-platform}: no input produces motion along the base
-$y$-axis. The model is kinematic, not dynamic. Both actuator groups are
-commanded in velocity---the drive controller takes a twist and the arm
-controller takes joint positions at a fixed rate---and no validated
-inertial parameters exist for the loaded platform, so a dynamic model
-would add nine states and an unverified mass matrix without changing
-what can be commanded. The cost of this choice is that inertial effects
-appear to the solver only through the velocity limits.
+$y$-axis. The model is kinematic, not dynamic. In the control chain used
+here, neither actuator group receives a force or torque command: the
+drive controller takes a twist, and the arm is driven by the
+joint-trajectory controller with position setpoints at a fixed rate. The
+UR driver also loads an effort controller for the software version of
+this arm (PolyScope~5.24), but that controller stays inactive in this
+work. No validated inertial parameters exist for the loaded platform
+either. A dynamic model would therefore add eight velocity states ($v$,
+$\omega$ and the six arm joint rates) and an unverified mass matrix,
+while the commands that reach the actuators would remain twists and
+joint positions. The cost of this choice is that inertial effects appear
+to the solver only through the velocity limits.
 
 The objective combines an input cost with soft constraints. Over a
 horizon $T$ starting at $t_0$,
@@ -319,6 +432,73 @@ interactive marker in RViz or by the waypoint node used in
 linearly and component-wise between successive knots, the quaternion
 included, which is why the waypoint node commands one constant
 orientation for the whole path (\cref{sec:sim-path}).
+\Cref{fig:cost-structure} collects the terms and the quantities each of
+them acts on.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      term/.style={draw, rounded corners=1pt, align=center, inner sep=3.5pt,
+                   minimum height=7.5mm, minimum width=30mm},
+      tgt/.style={draw, rounded corners=1pt, align=center, inner sep=3.5pt,
+                  minimum height=7.5mm, minimum width=36mm, fill=gray!10},
+      ref/.style={draw, rounded corners=1pt, align=center, inner sep=3pt,
+                  minimum height=6.5mm, minimum width=36mm,
+                  draw=RWTHBlau100},
+      flow/.style={-{Latex[length=1.8mm]}, thick},
+      wk/.style={font=\scriptsize, align=left},
+      lbl/.style={font=\scriptsize, align=center},
+    ]
+    % --- cost terms ---------------------------------------------------
+    \node[term] (r)   at (0,0)    {$\tfrac{1}{2}\,\uvec^{\mathsf{T}} R\, \uvec$};
+    \node[term] (ep)  at (0,-1.15) {$\tfrac{1}{2}\, \mu_\mathrm{p} \lVert e_\mathrm{p} \rVert^2$};
+    \node[term] (eo)  at (0,-2.30) {$\tfrac{1}{2}\, \mu_\mathrm{o} \lVert e_\mathrm{o} \rVert^2$};
+    \node[term] (bl)  at (0,-3.45) {$B_\mathrm{lim}(\svec, \uvec)$};
+    \node[term] (bc)  at (0,-4.60) {$B_\mathrm{col}(\svec)$};
+    \node[term] (phi) at (0,-5.75) {$\Phi\big(\svec(t_0+T)\big)$};
+
+    % --- configured values --------------------------------------------
+    \node[wk, anchor=east] at (-1.75,0)     {$R_\mathrm{base} = 0.085\, I_2$,\\$R_\mathrm{arm} = 0.04\, I_6$};
+    \node[wk, anchor=east] at (-1.75,-1.15) {$\mu_\mathrm{p} = 10$};
+    \node[wk, anchor=east] at (-1.75,-2.30) {$\mu_\mathrm{o} = 5$};
+    \node[wk, anchor=east] at (-1.75,-3.45) {panel joint limits,\\velocity bounds on all\\eight inputs};
+    \node[wk, anchor=east] at (-1.75,-4.60) {12 link pairs,\\margin \qty{0.11}{\meter}};
+    \node[wk, anchor=east] at (-1.75,-5.75) {repeats $\mu_\mathrm{p}$, $\mu_\mathrm{o}$\\at the horizon end};
+
+    % --- targets --------------------------------------------------------
+    \node[tgt] (u) at (5.2,0)     {input $\uvec = (v, \omega, \qarmdot)$};
+    \node[tgt] (e) at (5.2,-1.95) {\ee{} pose error against\\the reference pose};
+    \node[tgt] (x) at (5.2,-4.30) {state $\svec$};
+
+    % --- reference chain -------------------------------------------------
+    \node[ref] (src) at (5.2,-6.5)
+      {interactive marker or\\waypoint node};
+    \node[ref] (int) at (5.2,-8.0)
+      {component-wise linear\\interpolation, quaternion\\included};
+    \draw[flow, RWTHBlau100] (src) -- (int);
+    \draw[flow, RWTHBlau100] (int.east) -- ++(1.1,0) |- (e.east);
+
+    % --- term to target ---------------------------------------------------
+    \draw[flow] (r)   -- (u);
+    \draw[flow] (ep.east)  -- (e.west);
+    \draw[flow] (eo.east)  -- (e.west);
+    \draw[flow] (bl.east)  -- (x.west);
+    \draw[flow] (bl.east)  -- (u.west);
+    \draw[flow] (bc.east)  -- (x.west);
+    \draw[flow, dashed] (phi.east) -- (2.75,-5.75) |- ([yshift=-2.5mm]e.west);
+  \end{tikzpicture}
+  \caption[Structure of the \ocs{} objective on \hero{}]{%
+    Terms of the objective in \cref{eq:cost}, the values configured for
+    them in \cref{tab:mpc-config}, and the quantities each term acts on.
+    The ratio between $R_\mathrm{base}$ and $R_\mathrm{arm}$ is what
+    distributes a commanded \ee{} motion between base and arm. In blue,
+    the path by which the reference reaches the two \ee{} terms: the
+    reference manager interpolates between successive knots
+    component-wise, the quaternion included, which is why the waypoint
+    node commands one constant orientation for a whole path.}
+  \label{fig:cost-structure}
+\end{figure}
 
 The input weight is diagonal and separates base from arm,
 $R = \operatorname{diag}(R_\mathrm{base}, R_\mathrm{arm})$ with
@@ -350,7 +530,47 @@ The barrier is logarithmic while the constraint is comfortably
 satisfied and switches to a quadratic extension below the relaxation
 width $\delta$, which keeps the cost and its derivatives finite when a
 constraint is violated---necessary here, because measured states from
-the real robot do occasionally violate a limit. Three groups of
+the real robot do occasionally violate a limit. \Cref{fig:barrier}
+shows the penalty at the configured relaxation width.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.88\linewidth, height=5.2cm,
+        xlabel={constraint slack $h$ / \si{\milli\meter}},
+        ylabel={$B(h)$},
+        xmin=-3, xmax=20, ymin=0, ymax=0.2,
+        scaled y ticks=false,
+        yticklabel style={/pgf/number format/fixed,
+                          /pgf/number format/precision=2},
+        legend pos=north east,
+      ]
+      \addplot[RWTHOrange100, thick, domain=-3:1, samples=90]
+        {-0.01*ln(0.001) + 0.005*((x-2)^2 - 1)};
+      \addplot[RWTHBlau100, thick, domain=1:20, samples=200]
+        {-0.01*ln(x/1000)};
+      \addplot[black, dashed, forget plot] coordinates {(1,0) (1,0.2)};
+      \legend{quadratic extension, $-\mu \ln h$}
+      \node[anchor=south west, font=\scriptsize] at (axis cs:1.3,0.155)
+        {$\delta = \qty{1}{\milli\meter}$};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Relaxed barrier penalty at the configured relaxation width]{%
+    Relaxed barrier penalty of \cref{eq:barrier} at the values configured
+    for the self-collision term, $\mu = \num{e-2}$ and
+    $\delta = \qty{1}{\milli\meter}$. The slack $h$ is the amount by
+    which a constraint is satisfied, so $h = 0$ is the constraint
+    boundary and $h < 0$ a violation. Left of $\delta$ the logarithm is
+    replaced by its quadratic extension, which keeps the penalty and its
+    derivatives finite for the violated states that the real robot
+    occasionally reports. For self-collision the slack is the distance of
+    a link pair minus the \qty{0.11}{\meter} margin, so the quadratic
+    extension acts only on a pair that is closer than
+    $\qty{0.11}{\meter} + \delta$.}
+  \label{fig:barrier}
+\end{figure}
+ Three groups of
 constraints use this penalty: arm joint position limits, velocity limits
 on all eight inputs, and a minimum distance between selected pairs of
 links. The position limits are overridden in the task file instead of
@@ -358,33 +578,106 @@ being read from the URDF, which bounds every UR10e joint at
 \ang{\pm 360}. Those bounds are far wider than the joint limits
 configured in the arm's own safety panel, so a plan that satisfies the
 URDF can still drive the arm into a safety limit and provoke a
-protective stop that \ocs{} never sees. The values used here are the
-panel limits of this installation.
+protective stop that \ocs{} never sees. The task file therefore copies
+the panel limits that were configured during the experiments of
+\cref{ch:hardware}: \ang{-183} to \ang{3} for the base and shoulder
+joints, \ang{\pm 153} for the elbow, \ang{-228} to \ang{48} for
+wrist~1, \ang{\pm 138} for wrist~2 and \ang{\pm 183} for wrist~3. The
+safety configuration of the arm has since been changed and now allows
+\ang{\pm 363} on wrist~3; the other five ranges are unchanged
+(\cref{fig:pendant-limits}).
 The velocity bounds are \qty{\pm 0.1}{\meter\per\second} and
 \qty{\pm 0.1}{\radian\per\second} for the base and
 \qty{\pm 0.3}{\radian\per\second} per arm joint, matching the caps that
 the bridge enforces downstream (\cref{sec:hw-interfaces}).
 
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ur_pendant_joint_limits.jpg}
+  \caption{Joint-limit page of the UR10e safety configuration on the
+    teach pendant, photographed after the experiments of
+    \cref{ch:hardware}. The Normal-mode ranges of the first five joints
+    equal the bounds in \texttt{task\_hardware.info}; wrist~3 was
+    widened from \ang{\pm 183} to \ang{\pm 363} after the experiments.}
+  \label{fig:pendant-limits}
+\end{figure}
+
 Self-collision is singled out here because its evaluation cost scales
-with the number of geometry pairs and it was therefore the first term
-addressed when solve time had to be reduced. The platform carries tube
-holders and instrument rings on the arm links, and a naive enumeration
-of the pairs that can touch yields 32 of them; each pair costs a
-distance query and a derivative at every collocation point. The set was
-reduced to twelve pairs by dropping attachments that protrude less than
-about \qty{6}{\centi\meter} beyond their parent link and raising the
-minimum distance to \qty{0.11}{\meter}, so that the parent-link pair
-plus the margin covers the dropped geometry. The two largest forearm
-stacks are kept explicitly. The discarded pairs are retained in a
-separate file and can be visualised for inspection.
+with the number of geometry pairs, and it was therefore the first term
+addressed when solve time had to be reduced. Every pair costs a distance
+query and its derivative with respect to the state at each time node of
+every solve, and the \qty{1.2}{\second} horizon at the
+\qty{2}{\milli\second} step of \cref{tab:mpc-config} has about 600 such
+nodes~\cite{Carpentier2019Pinocchio,ocs2Toolbox}. The constraint value
+of a pair is its distance minus the minimum distance~\cite{ocs2Toolbox}.
+
+Two platform bodies are within reach of the arm. The chassis top is the
+mounting plane of the arm, and the shoulder axis lies only about
+\qty{0.18}{\meter} above it; the operator panel (\texttt{hmi}), a box of
+\qty{0.21}{\meter} $\times$ \qty{0.30}{\meter} $\times$
+\qty{0.25}{\meter}, starts \qty{0.075}{\meter} beside the shoulder axis
+and covers the height of the shoulder. On the arm side, the five moving
+links from \texttt{upper\_arm\_link} to \texttt{wrist\_3\_link} carry
+attachments: six marker rings of the motion capture system, which
+protrude at most about \qty{1}{\centi\meter} from the link surface, and
+six tube holders, which protrude about
+\qtyrange{3}{6}{\centi\meter}. Pairing both platform bodies with these links and
+attachments gave the original set of 32 pairs. Pairs whose distance does
+not change with the arm configuration, such as the shoulder link against
+the chassis, were never part of it.
+
+The reduction to twelve pairs, listed in \cref{tab:collision-pairs},
+removes pairs that are redundant rather than pairs that are harmless. An
+attachment is dropped when the pair formed by its parent link and the
+same platform body already keeps it clear. For the rings this holds with
+any margin larger than their protrusion. For the tube holders it
+required raising the minimum distance from \qty{0.08}{\meter} to
+\qty{0.11}{\meter}, which leaves a clearance of about
+\qty{5}{\centi\meter} for a dropped holder in its least favourable
+orientation. The two largest holders sit on the forearm, the link that
+most often dips towards the chassis during operation, and their pairs
+with the chassis are kept explicitly. The dropped pairs are listed in a
+comment of the task file but are not part of the model. Their effect on
+solve time was not measured in isolation; the reduction cut the number
+of distance queries per solve by \qty{62.5}{\percent}, and the UR safety
+layer remains the last line of protection against a contact the reduced
+set does not see.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Self-collision pairs before and after the reduction]{%
+    Self-collision pairs between the arm and the two platform bodies,
+    before (32) and after (12) the reduction. A dropped pair is covered
+    by the pair of its parent link with the same platform body and the
+    minimum distance of \qty{0.11}{\meter}.}
+  \label{tab:collision-pairs}
+  \begin{tabularx}{\linewidth}{@{}Xlcc@{}}
+    \toprule
+    Arm-side body & Protrusion & \texttt{hmi} & \texttt{chassis} \\
+    \midrule
+    \texttt{upper\_arm}, \texttt{forearm}, \texttt{wrist\_1}--\texttt{3}
+      & link itself & kept (5) & kept (5) \\
+    marker rings \texttt{ring2}--\texttt{ring6}
+      & $\le \qty{1}{\centi\meter}$ & dropped (6) & dropped (4) \\
+    tube holders \texttt{bottom\_1}--\texttt{4}
+      & \qtyrange{3}{6}{\centi\meter} & dropped (4) & dropped (4) \\
+    tube holders \texttt{top\_3}, \texttt{top\_4} (forearm)
+      & \qtyrange{3}{6}{\centi\meter} & dropped (2) & kept (2) \\
+    \midrule
+    Pairs before / after & & 17 / 5 & 15 / 7 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 The solver settings and the horizon are collected in
 \cref{tab:mpc-config}. Three of them interact and are worth spelling
-out. Only one SLQ iteration per solve is
-allowed~\cite{Farshidian2017SLQ}: with a \qty{1.2}{\second} horizon and a
-re-solve every \qty{100}{\milli\second} the previous solution is already
-a usable initial guess, so a second iteration adds little tracking
-benefit relative to the doubled solve time. The policy that the solver
+out. Only one SLQ iteration per solve is allowed. The solver starts a
+new solve as soon as the previous one has finished
+(\cref{sec:hw-interfaces}), so the previous solution, computed a few
+hundred milliseconds earlier over a \qty{1.2}{\second} horizon, is a
+usable initial guess; a second iteration would roughly double the solve
+time and delay the next fresh observation by the same
+amount~\cite{Farshidian2017SLQ}. The policy that the solver
 publishes is declared valid for a \emph{solution time window} of
 \qty{1.0}{\second}, shorter than the horizon; the bridge holds the robot
 once a policy is exhausted rather than extrapolating it
@@ -401,9 +694,67 @@ must arrive before the previous one expires, and it must not claim
 validity beyond the horizon it was computed for. This invariant is
 checked from the solver's diagnostics topic at the start of every
 session and is the quantity that governs the failure mode analysed in
-\cref{sec:hw-challenges}.
+\cref{sec:hw-challenges}. \Cref{fig:rt-invariant} places the three
+quantities on one time axis.
 
-\begin{table}[htbp]
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      note/.style={font=\scriptsize, align=left},
+      bar/.style={draw, minimum height=5.5mm, inner sep=0pt, anchor=west},
+      tick/.style={thin, gray, dashed},
+    ]
+    % scale: 1 s = 6.5 cm
+    \def\sT{7.8}    % horizon 1.2 s
+    \def\sS{6.5}    % solution time window 1.0 s
+    \def\sQ{3.0}    % 2 * average solve time, illustrative
+
+    % --- guide lines --------------------------------------------------
+    \draw[tick] (\sS,0.55) -- (\sS,-3.3);
+    \draw[tick] (\sT,0.55) -- (\sT,-3.3);
+
+    % --- bars ----------------------------------------------------------
+    \node[bar, minimum width=\sT cm, fill=RWTHBlau100!12] (h) at (0,0) {};
+    \node[lbl] at (\sT/2,0) {horizon $T = \qty{1.2}{\second}$};
+
+    \node[bar, minimum width=\sS cm, fill=RWTHBlau100!25] (s) at (0,-1.0) {};
+    \node[lbl] at (\sS/2,-1.0)
+      {solution time window $T_\mathrm{sol} = \qty{1.0}{\second}$};
+
+    \node[bar, minimum width=\sQ cm, fill=RWTHOrange100!30] (q) at (0,-2.0) {};
+    \node[lbl] at (\sQ/2,-2.0) {$2\,\overline{t}_\mathrm{solve}$};
+
+    % --- axis ----------------------------------------------------------
+    \draw[-{Latex[length=1.8mm]}] (0,-3.0) -- (\sT+0.9,-3.0)
+      node[right, font=\scriptsize] {$\tau$};
+    \foreach \x/\t in {0/0} {
+      \draw (\x,-2.9) -- (\x,-3.1) node[below, lbl] {\t};
+    }
+    \draw (\sS,-2.9) -- (\sS,-3.1) node[below, lbl] {$T_\mathrm{sol}$};
+    \draw (\sT,-2.9) -- (\sT,-3.1) node[below, lbl] {$T$};
+
+    % --- violation annotations ------------------------------------------
+    \node[note, anchor=north west, text width=112mm] at (0,-3.55)
+      {If $2\,\overline{t}_\mathrm{solve}$ reaches past $T_\mathrm{sol}$, a
+       policy expires before its successor arrives and the bridge holds.
+       If $T_\mathrm{sol}$ passed $T$, a policy would claim validity
+       beyond the horizon it was computed for.};
+  \end{tikzpicture}
+  \caption[Real-time invariant of the \mpc{}--MRT loop]{%
+    The three quantities of \cref{eq:rt-invariant} on one time axis, at
+    the everyday operating point of \cref{tab:mpc-config}. The ordering
+    $2\,\overline{t}_\mathrm{solve} < T_\mathrm{sol} < T$ is a design
+    condition checked before a session, not a measurement, and the length
+    of the $2\,\overline{t}_\mathrm{solve}$ bar is illustrative; the solve
+    times actually reached on the two plants are reported in
+    \cref{sec:hw-challenges}, where the \mpc{} loop runs at the wider
+    Experiment~A setting.}
+  \label{fig:rt-invariant}
+\end{figure}
+
+\begin{table}[!htbp]
   \centering
   \caption[\ocs{} operating point on \hero{}]{%
     \ocs{} operating point for on-robot operation, as configured in
@@ -428,8 +779,9 @@ session and is the quantity that governs the failure mode analysed in
     \addlinespace
     \mpc{}   & horizon $T$                    & \qty{1.2}{\second} \\
              & solution time window $T_\mathrm{sol}$ & \qty{1.0}{\second} \\
-             & nominal solve rate             & \qty{10}{\hz} \\
-             & policy evaluation rate         & \qty{100}{\hz} \\
+             & bridge loop rate $f_\mathrm{MRT}$ (\texttt{mrtDesiredFrequency}) & \qty{50}{\hz} \\
+             & solve rate                     & $\min(f_\mathrm{MRT},\, 1/t_\mathrm{solve})$ \\
+             & \texttt{mpcDesiredFrequency}   & \qty{10}{\hz}, warning threshold only \\
     \addlinespace
     Cost     & $R_\mathrm{base}$, $R_\mathrm{arm}$ & $0.085\,I_2$, $0.04\,I_6$ \\
              & $\mu_\mathrm{p}$, $\mu_\mathrm{o}$ (running and final) & $10$, $5$ \\
@@ -459,9 +811,48 @@ configuration file suggests otherwise.
 \label{sec:hw-interfaces}
 
 The MRT bridge is the only component written specifically for this
-deployment. It closes the loop between the \ocs{} policy and
-\texttt{ros2\_control}, and it runs at \qty{100}{\hz} on the
-IPC~\cite{ros2control}.
+deployment. It is the MRT client of the MPC--MRT split
+(\cref{sec:sota-ocs2}) adapted to the real robot, and it closes the loop
+between the \ocs{} policy and \texttt{ros2\_control} on the
+IPC~\cite{ros2control}. Its practical role is to decouple the actuation
+rate from the solve rate. A policy arrives only every few hundred
+milliseconds, but it is a function of time over the solution time
+window, so the bridge can evaluate it at the current time in every cycle
+and keep commanding the robot between solves. The bridge is also the
+place where a policy that has become too old is detected and replaced
+by a hold.
+
+The bridge has a single clock, the loop rate $f_\mathrm{MRT}$ set by
+\texttt{mrtDesiredFrequency} in the task file. Each cycle publishes an
+observation, collects a newly arrived policy, runs the checks of
+\cref{tab:bridge-guards} and evaluates the policy into a base twist and
+an arm setpoint. The observation also paces the solver: the \mpc{} node
+solves inside the callback of each observation it receives, with a queue
+depth of one and no throttle of its own~\cite{ocs2Toolbox}. The solve
+rate on the robot is therefore $\min(f_\mathrm{MRT}, 1/t_\mathrm{solve})$,
+with $t_\mathrm{solve}$ the duration of one solve. The
+\texttt{mpcDesiredFrequency} entry of \qty{10}{\hz} does not throttle
+anything on this path; the bridge uses it only as the warning threshold
+in \cref{tab:bridge-guards}.
+
+The loop rate was lowered from \qty{100}{\hz} to \qty{50}{\hz} after the
+sessions reported in \cref{ch:hardware}, which ran at \qty{100}{\hz}.
+At \qty{100}{\hz} the bridge sampled the base faster than its state
+source changes: the drive controller publishes odometry at
+\qty{50}{\hz}, so every second observation carried the same base pose
+as the one before it. That doubled the observation traffic over the
+network and the work of the bridge on the four-thread IPC without adding
+information. The solver was not affected, because with solves of a few
+hundred milliseconds it runs back to back at either rate. The lower rate
+keeps the other requirements on the loop satisfied with margin. The base
+twist is held for one cycle, which at the \qty{0.1}{\meter\per\second}
+bound is a step of \qty{2}{\milli\meter} instead of
+\qty{1}{\milli\meter}. The \qty{0.2}{\second} staleness window is still
+checked ten times, and the \qty{0.5}{\second} command timeout of the
+drive controller spans 25 cycles. The commanded arm speed is bounded by
+the step clamp described below, independently of the loop rate. The
+price is that a new policy may wait up to one cycle,
+\qty{20}{\milli\second}, before it is first used.
 
 Each cycle begins with an observation. The base pose $(p_x, p_y, \psi)$
 is taken from the drive controller's odometry, with the yaw extracted
@@ -470,7 +861,7 @@ from the reported quaternion, and $\qarm$ is looked up by joint name in
 throttled warning instead of silently inserting a zero. The observation
 timestamp is the later of the two message stamps, expressed relative to
 the origin fixed at the first accepted measurement, which is the
-relative time axis that makes the split deployment insensitive to clock
+relative time axis that makes the deployment insensitive to clock
 offsets.
 
 Before the first command, the bridge performs a reset handshake with the
@@ -478,13 +869,76 @@ Before the first command, the bridge performs a reset handshake with the
 bridge computes the current \ee{} pose by forward kinematics from the
 latest observation and sends it as a two-knot target trajectory inside
 the reset request: the solver starts by holding the pose the robot is
-already in. The handshake is guarded on both sides. The bridge waits for
+already in. The bridge guards the handshake against both ways it can
+fail. It waits for
 the reset service rather than assuming it exists, logs an actionable
 error after \qty{15}{\second} and keeps waiting, and retries the request
 if the response is lost---a single dropped reply over the network must
 not leave the bridge dead. After a handshake the time-axis baseline is
 reset as well, because the blocking call may have consumed several
 seconds and the next observation would otherwise look like a time jump.
+\Cref{fig:reset-handshake} shows the exchange and the two ways it can
+fail.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      head/.style={draw, rounded corners=1pt, align=center, inner sep=3.5pt,
+                   minimum height=7mm, minimum width=36mm},
+      life/.style={dashed, gray},
+      msg/.style={-{Latex[length=2mm]}, thick},
+      selfact/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                      font=\scriptsize, fill=gray!10},
+      lbl/.style={font=\scriptsize, align=center},
+      note/.style={font=\scriptsize, align=left, text=RWTHOrange100},
+    ]
+    \node[head] (b) at (0,0)   {MRT bridge (IPC)};
+    \node[head] (m) at (8.2,0) {\mpc{} node (external PC)};
+    \draw[life] (b.south) -- (0,-7.3);
+    \draw[life] (m.south) -- (8.2,-7.3);
+
+    % --- 1: build the initial target --------------------------------
+    \node[selfact, anchor=west] (a1) at (0.25,-1.15)
+      {forward kinematics of the latest observation\\
+       $\rightarrow$ two-knot target at the current \ee{} pose};
+
+    % --- 2: probe the service ---------------------------------------
+    \node[selfact, anchor=west] (a2) at (0.25,-2.5)
+      {probe \texttt{\dots\_mpc\_reset}, one attempt per second};
+    \node[note, anchor=east, align=right, text width=30mm] at (-0.3,-2.5)
+      {after \qty{15}{\second}: actionable\\error, and keep waiting};
+
+    % --- 3: request ---------------------------------------------------
+    \draw[msg] (0,-3.7) -- (8.2,-3.7)
+      node[lbl, midway, above] {reset request, target in the payload};
+
+    % --- 4: solver resets --------------------------------------------
+    \node[selfact, anchor=east] (a4) at (7.95,-4.6)
+      {reset the solver; write the target\\into the reference manager};
+
+    % --- 5: response ---------------------------------------------------
+    \draw[msg] (8.2,-5.6) -- (0,-5.6)
+      node[lbl, midway, above] {response};
+    \node[note, anchor=east, align=right, text width=30mm] at (-0.3,-5.6)
+      {response lost: hold and\\retry on the next cycle};
+
+    % --- 6: baseline --------------------------------------------------
+    \node[selfact, anchor=west] (a6) at (0.25,-6.6)
+      {clear the time-axis baseline; handshake done};
+  \end{tikzpicture}
+  \caption[Reset handshake between the MRT bridge and the \mpc{} node]{%
+    Reset handshake that precedes the first command. The bridge derives
+    the initial reference from its own latest observation, so the solver
+    starts by holding the pose the robot is already in. Both guards, in
+    orange, sit in the bridge: it waits for the service rather than
+    assuming it exists, and a lost response leaves it holding and
+    retrying instead of dead. Clearing the time-axis baseline
+    afterwards is necessary because the blocking call may have consumed
+    several seconds, which the next observation would otherwise present as
+    a time jump.}
+  \label{fig:reset-handshake}
+\end{figure}
 
 The base command is the first two elements of the optimised input,
 published as a stamped twist on \texttt{/cmd\_vel\_ocs2} rather than
@@ -505,7 +959,7 @@ trajectory point with that time from start, but it first clamps each
 joint's step to
 $\dot{q}_\mathrm{max} \cdot t_\mathrm{preview} = \qty{0.18}{\radian}$
 around the currently measured position. Because the next cycle repeats
-the computation \qty{10}{\milli\second} later, the arm still advances
+the computation \qty{20}{\milli\second} later, the arm still advances
 towards the target, at a rate bounded by
 \qty{0.3}{\radian\per\second}. When the clamp engages, the bridge warns;
 frequent warnings indicate that the optimised state is jumping between
@@ -522,13 +976,103 @@ the drive controller as timed out. The arm trajectory carries a zero
 header stamp, which the controller reads as ``start now''; a wall-clock
 stamp arrives a few milliseconds late and the whole trajectory is
 rejected as ending in the past, so the hold never applies.
-\Cref{tab:bridge-guards} lists the conditions that trigger a hold.
+\Cref{tab:bridge-guards} lists the conditions that trigger a hold, and
+\cref{fig:bridge-cycle} places them in the order the cycle evaluates
+them.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      act/.style={draw, rounded corners=1pt, align=center, inner sep=3.5pt,
+                  minimum height=8mm, minimum width=56mm},
+      guard/.style={act, fill=gray!10},
+      hold/.style={act, draw=RWTHOrange100, thick, minimum width=22mm},
+      cmd/.style={act, minimum width=40mm},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      rail/.style={thick},
+      lbl/.style={font=\scriptsize, align=center},
+      side/.style={font=\scriptsize, align=left},
+    ]
+    % --- main column -------------------------------------------------
+    \node[act]   (obs) at (0,0)
+      {observation from odometry and \texttt{/joint\_states},\\
+       stamped with the later of the two};
+    \node[guard] (g1)  at (0,-1.6) {measurement age $> \qty{0.2}{\second}$?};
+    \node[guard] (g2)  at (0,-2.9)
+      {$\Delta t < 0$ or $\Delta t > \qty{0.5}{\second}$?};
+    \node[guard] (g3)  at (0,-4.2) {reset handshake done?};
+    \node[act]   (upd) at (0,-5.5)
+      {publish the observation, fetch the latest policy\\
+       (no policy received yet: end the cycle)};
+    \node[guard] (g4)  at (0,-6.8) {no new policy for $2\,T_\mathrm{sol}$?};
+    \node[guard] (g5)  at (0,-8.1) {remaining policy validity $\le 0$?};
+    \node[act]   (ev)  at (0,-9.4)
+      {evaluate the policy at \texttt{observation.time}\\
+       $\rightarrow$ input $\uvec$, state $\svec$};
+    \node[cmd]   (base) at (-2.6,-11.3)
+      {clamp $v, \omega$ to $\pm 0.1$;\\
+       stamp at publication\\
+       $\rightarrow$ \texttt{twist\_mux}};
+    \node[cmd]   (arm)  at (2.6,-11.3)
+      {clamp the step to $\pm \qty{0.18}{\radian}$,\\
+       then to the panel limits\\
+       $\rightarrow$ joint-trajectory controller};
+
+    % --- hold ---------------------------------------------------------
+    \node[hold] (hd) at (6.2,-4.85) {hold};
+    \node[side, anchor=north west, text width=21mm] at (5.15,-5.45)
+      {no policy for $5\times$ the timeout: also re-arm the handshake};
+
+    % --- main flow ----------------------------------------------------
+    \draw[flow] (obs) -- (g1);
+    \draw[flow] (g1)  -- (g2)  node[lbl, midway, left=1mm] {no};
+    \draw[flow] (g2)  -- (g3)  node[lbl, midway, left=1mm] {no};
+    \draw[flow] (g3)  -- (upd) node[lbl, midway, left=1mm] {yes};
+    \draw[flow] (upd) -- (g4);
+    \draw[flow] (g4)  -- (g5)  node[lbl, midway, left=1mm] {no};
+    \draw[flow] (g5)  -- (ev)  node[lbl, midway, left=1mm] {no};
+    \draw[flow] (0,-9.85) -- (0,-10.3) -| (base.north);
+    \draw[flow] (0,-9.85) -- (0,-10.3) -| (arm.north);
+
+    % --- guard exits to the hold rail ---------------------------------
+    \draw[rail] (g1.east) -- (4.9,-1.6) node[lbl, pos=0.4, above] {yes};
+    \draw[rail] (g4.east) -- (4.9,-6.8) node[lbl, pos=0.4, above] {yes};
+    \draw[rail] (g5.east) -- (4.9,-8.1) node[lbl, pos=0.4, above] {yes};
+    \draw[rail] (4.9,-1.6) -- (4.9,-8.1);
+    \draw[flow] (4.9,-4.85) -- (hd.west);
+
+    % --- left-hand exits ----------------------------------------------
+    \draw[rail] (g2.west) -- (-4.6,-2.9) node[lbl, pos=0.35, above] {yes};
+    \node[side, anchor=south east, text width=33mm] at (-4.6,-2.78)
+      {drop the frame; after 20 in a row, re-baseline the time axis and
+       re-handshake};
+    \draw[rail] (g3.west) -- (-4.6,-4.2) node[lbl, pos=0.35, above] {no};
+    \node[side, anchor=north east, text width=33mm] at (-4.6,-4.32)
+      {run the handshake of \cref{fig:reset-handshake}; on success
+       continue, on failure hold};
+  \end{tikzpicture}
+  \caption[One cycle of the MRT bridge]{%
+    One cycle of the MRT bridge, which runs at \qty{50}{\hz} on the IPC.
+    The guards are evaluated in the order shown; each either passes the
+    cycle on or ends it in the hold, which publishes a zero twist stamped
+    at publication together with an arm trajectory pinned at the measured
+    positions under a zero header stamp. The arm step limit of
+    \qty{0.18}{\radian} is the product of the arm velocity bound and the
+    preview time, \qty{0.3}{\radian\per\second} $\times$
+    \qty{0.6}{\second}, so the arm still advances towards the optimised
+    state over successive cycles. Thresholds and their origin are listed
+    in \cref{tab:bridge-guards}.}
+  \label{fig:bridge-cycle}
+\end{figure}
 
 \begin{table}[htbp]
   \centering
   \caption[Guards implemented in the MRT bridge]{%
-    Guards implemented in the MRT bridge. Thresholds are launch
-    arguments, not entries of the task configuration file.}
+    Guards implemented in the MRT bridge. Most thresholds are launch
+    arguments of the bridge; the policy timeout is derived from
+    $T_\mathrm{sol}$, and the warning threshold from
+    \texttt{mpcDesiredFrequency}, both in the task configuration file.}
   \label{tab:bridge-guards}
   \begin{tabularx}{\linewidth}{@{}lX@{}}
     \toprule
@@ -541,13 +1085,14 @@ rejected as ending in the past, so the hold never applies.
       & drop the frame to protect the solver's time axis; after $20$
         consecutive drops, accept the new time as baseline and
         re-handshake \\
-    Policy validity below one solve interval
+    Remaining policy validity below \qty{0.1}{\second}
+      ($1/\texttt{mpcDesiredFrequency}$)
       & warn: the robot is outrunning the optimiser \\
     Policy validity exhausted
       & hold instead of evaluating a policy beyond its window \\
-    No new policy for $2\,T_\mathrm{sol}$
-      & hold; the workstation or the link is assumed busy \\
-    No new policy for $5\times$ that time
+    No new policy for $2\,T_\mathrm{sol}$, at least \qty{1}{\second}
+      & hold; the external PC or the link is assumed busy \\
+    No new policy for $5\times$ that time, at least \qty{5}{\second}
       & re-run the reset handshake, on the assumption that the \mpc{}
         node restarted and no longer accepts the current observations \\
     Commanded arm step beyond the rate limit

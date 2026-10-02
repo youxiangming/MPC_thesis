@@ -165,6 +165,7 @@ Buckhorst 2022 实为 *Decentralized Holonic Control System Model for LMAS*, RCI
 - **原文**：“They”
   - 批注：what is they in the sentence, reuse learning based schemes, even if it redundant
   - 处理：“They”改为“Learning-based schemes”（宁可重复）。
+  - **2026-09-30 更新**：作者决定删除全部基于学习（RL）的方法对比，该 bullet 已整条删除，本条不再适用。
 - **原文**：“Only online,”
   - 批注：What is only online
   - 处理：改为“It is the online, feedback-driven variant that supplies the disturbance rejection …”，并说明离线轨迹缺少反应机制的原因。
@@ -204,6 +205,7 @@ Buckhorst 2022 实为 *Decentralized Holonic Control System Model for LMAS*, RCI
 - **原文**：“A growing body of work hybridises classical navigation with reinforcement learning to amortise the o…”
   - 批注：again cite the direct source, not the review paper
   - 处理：**按邮件要求改掉**：改引一手文献 [Honerkamp2023N2M2]、[Jauhri2022Reachability]、[Iriondo2023DRL]、[Kang2024DoorOpening]。
+  - **2026-09-30 更新**：作者决定删除全部基于学习（RL）的方法对比，§2.2.2 该段已整段删除；四个 bib 条目留在 `.bib` 中但不再被引用。
 - **原文**：“hardware stack.”
   - 批注：interfaces
   - 处理：“existing hardware stack”改为“ROS~2 interfaces”。

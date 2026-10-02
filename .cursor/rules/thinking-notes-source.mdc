@@ -1,5 +1,5 @@
 ---
-description: Always treat /home/xy/thinking as a thesis source; refresh it before writing any thesis content.
+description: Always treat /home/xy/thinking as a thesis source; refresh it before writing any thesis content. Cloud-discussion notes are narrative supplements only — numbers and architecture follow the live project.
 alwaysApply: true
 ---
 
@@ -8,6 +8,19 @@ alwaysApply: true
 `/home/xy/thinking` is Xiangming's Obsidian vault of robot-debug logs, failure/solution notes, experiment ideas, and thesis outlines. It is **project memory**, not optional background.
 
 Named high-priority note (always consult when writing deployment or experiments): `/home/xy/thinking/Ros build.md` — IPC/PC launch, Experiment A, rosbag, Zenoh, time sync, solver/policy-lag logs.
+
+## Cloud-discussion notes (小论文 / thesis narrative supplements)
+
+Two vault notes capture Claude.ai cloud discussions. Use them for **problem narrative, design rationale, and chapter hooks** — not as a source of current facts.
+
+| Role | Path |
+|------|------|
+| Broader ledger (coverage, chapter map, known contradictions) | `/home/xy/thinking/thesis/claude 云端讨论总结.md` |
+| Finer failure/design detail (policy exhaustion chain, UR wording, Release/CppAD) | `/home/xy/thinking/thesis/OCS2 在 Hero 移动机械臂真机部署——调试记录与论文素材.md` |
+
+**Authority (hard):** live `/home/xy/hero-ros2` (`task_hardware.info`, code, docs) and settled project memory (e.g. bridge-on-IPC only, Experiment A frozen config) win over any number, topology, or "current architecture" in these notes. The ledger's own §0 and §7 say the same. If unverifiable, leave a `\todo{}` / `// TODO verify` — do not invent from chat memory.
+
+When the two cloud notes disagree in detail, prefer the finer OCS2 deployment note for that topic; still re-verify facts in the repo before writing.
 
 Before drafting or editing any thesis/seminar text:
 

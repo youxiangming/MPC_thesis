@@ -12,7 +12,7 @@ dynamics or wheel-odometry drift. The gap between the two sessions is
 therefore the contribution of the plant and of the state estimate, on
 top of a residual that the dummy never sees.
 
-\Cref{sec:hw-deployment} records how the split deployment was started
+\Cref{sec:hw-deployment} records how the deployment was started
 and which sessions are reported. \Cref{sec:hw-challenges} treats the
 timing and model problems that show up once the bridge is in the loop.
 \Cref{sec:hw-results} compares one mock lap with one hardware lap on the
@@ -26,11 +26,11 @@ baseline.
 \section{Deployment on the \hero{} Platform}
 \label{sec:hw-deployment}
 
-The topology is the split deployment of \cref{sec:distributed-arch}: the
-workstation solves the optimal-control problem and publishes the
+The topology is that of \cref{sec:distributed-arch}: the
+external PC solves the optimal-control problem and publishes the
 Experiment~A reference; the on-board IPC evaluates the policy and
 commands the drives. Both machines run the project containers on
-ROS~2~Jazzy with the Zenoh middleware. The workstation was attached to
+ROS~2~Jazzy with the Zenoh middleware. The external PC was attached to
 the platform subnet by Ethernet for every session below. The wireless
 access point of the platform remains a possible join path, and was the
 reason Zenoh was chosen in the first place, but it was not used as the
@@ -41,12 +41,12 @@ not go taut in the recorded laps; it is still a run condition, not a
 property of the controller.
 
 Start-up follows the order already required by the reset handshake.
-Each machine starts its Zenoh router, the workstation router pointing at
+Each machine starts its Zenoh router, the external PC router pointing at
 the IPC. The Experiment~A host launch then brings up the \mpc{} node, the
 waypoint target node and RViz, with the same task file and waypoint file
 the dummy used. Only after the reset service is advertised is the IPC
 launch started, so that the bridge can handshake immediately rather than
-wait. On the first start after a model change the workstation still
+wait. On the first start after a model change the external PC still
 spends about a minute compiling CppAD libraries; later starts reuse the
 cache. RViz is checked before anyone calls \texttt{/start}: the landed
 box, the orange lead legs, and in particular the lead-out at
@@ -75,7 +75,7 @@ $\qty{0.05}{\meter\per\second}$, corner dwell $\qty{2.0}{\second}$,
 horizon $T=\qty{1.3}{\second}$, solution time window
 $T_{\mathrm{sol}}=\qty{1.2}{\second}$, feed-forward SLQ with one
 iteration, $\mu_{\mathrm{p}}=16$, $\mu_{\mathrm{o}}=3$, and
-$R_{\mathrm{base}}$ pre-scale $5.5$. The solver on the workstation used
+$R_{\mathrm{base}}$ pre-scale $5.5$. The solver on the external PC used
 eight threads. Host and IPC logs were kept alongside the bags
 (\texttt{bag\_host\_0814\_1558} mock,
 \texttt{bag\_host\_0814\_1613} hardware). Metrics are computed from the
@@ -89,8 +89,8 @@ to $\texttt{segment\_id}\ge 1$ as in \cref{sec:sim-pose-error}.
 The real-time invariant of \cref{eq:rt-invariant} was written for the
 everyday file \texttt{task\_hardware.info}, where
 $T_{\mathrm{sol}}=\qty{1.0}{\second}$. The Experiment~A file widens that
-window to $\qty{1.2}{\second}$ so that a solve slower than the
-$\qty{10}{\hz}$ request can still hand the bridge a policy before the
+window to $\qty{1.2}{\second}$ so that a slow solve can still hand the
+bridge a policy before the
 previous one expires. On the hardware lap the last-solve time had mean
 $\qty{227}{\milli\second}$, median $\qty{218}{\milli\second}$ and 95th
 percentile $\qty{297}{\milli\second}$; the slowest sample in that stream
@@ -99,8 +99,9 @@ reached $\qty{720}{\milli\second}$. Policies arrived at
 $\qty{4.4}{\hz}$. Twice the mean solve, $\qty{0.45}{\second}$, is still
 less than $T_{\mathrm{sol}}$, and the bridge did not enter a
 policy-exhaustion hold on this lap. The loop therefore ran in real time
-in the sense of \cref{eq:rt-invariant}, at less than half the requested
-rate.
+in the sense of \cref{eq:rt-invariant}, although policies arrived at
+less than half the $\qty{10}{\hz}$ named by \texttt{mpcDesiredFrequency};
+on the robot that entry throttles nothing (\cref{sec:hw-interfaces}).
 
 The mock lap was faster on average (mean $\qty{174}{\milli\second}$,
 effective $\qty{5.8}{\hz}$) but not safer in the tail. One solve took
@@ -113,7 +114,58 @@ once on the robot and nine times on the mock. The warning compares the
 window with an internal delay estimate and is not the same test as a
 hold. Widening $T_{\mathrm{sol}}$ is what kept the spike from freezing
 the mock plant. It does not make a $\qty{10}{\hz}$ solver out of a
-$\qty{4}{\hz}$ one.
+$\qty{4}{\hz}$ one. \Cref{fig:hw-solve-ecdf} puts the two distributions
+side by side.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.92\linewidth, height=6.0cm,
+        xmode=log,
+        log ticks with fixed point,
+        xlabel={last-solve time / \si{\milli\second}},
+        ylabel={fraction of solves at or below},
+        xmin=100, xmax=1300,
+        ymin=0, ymax=1.03,
+        xtick={100,150,200,300,500,800,1200},
+        ytick={0,0.25,0.5,0.75,0.95},
+        yticklabels={$0$,$0.25$,$0.50$,$0.75$,$0.95$},
+        x tick label style={/pgf/number format/1000 sep={}},
+        legend pos=north west,
+      ]
+      \addplot[RWTHBlau100, thick, const plot, no marks]
+        table[x=ms, y=frac] {03_figures/hw_mock_solve_ecdf.dat};
+      \addplot[RWTHOrange100, thick, const plot, no marks]
+        table[x=ms, y=frac] {03_figures/hw_real_solve_ecdf.dat};
+      \addplot[gray, dotted, forget plot, domain=100:1300, samples=2] {0.95};
+      \addplot[black, dashed, forget plot] coordinates {(1000,0) (1000,1.03)};
+      \addplot[black, densely dashdotted, forget plot]
+        coordinates {(1200,0) (1200,1.03)};
+      \legend{mock, robot}
+      \node[anchor=east, font=\scriptsize] at (axis cs:980,0.58)
+        {\qty{1.0}{\second}};
+      \node[anchor=east, font=\scriptsize] at (axis cs:1180,0.40)
+        {\qty{1.2}{\second}};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Distribution of last-solve time on the mock and hardware
+    sessions]{%
+    Empirical distribution of the last-solve time on the two laps, on a
+    logarithmic axis; \cref{fig:hw-solve} shows the same two streams
+    against wall time. The mock curve sits to the left of the robot curve
+    over most of its range---the mock solves faster at the median,
+    \qty{163}{\milli\second} against \qty{218}{\milli\second}---but it is
+    the mock that carries the tail: its slowest solve is
+    \qty{1.12}{\second}, against \qty{353}{\milli\second} on the robot,
+    and about one mock solve in a hundred exceeds \qty{400}{\milli\second}
+    where the robot stream ends. The dashed line is the solution time
+    window of \texttt{task\_hardware.info} and the dash-dotted line the
+    wider window of the Experiment~A file; the mock spike falls between
+    them, which is why it expired a policy under the everyday setting but
+    not under the one actually used (\cref{eq:rt-invariant}).}
+  \label{fig:hw-solve-ecdf}
+\end{figure}
 
 Because a new policy is already old when it arrives, the input that the
 bridge applies is never the one at $\tau=0$ of the horizon.
@@ -456,7 +508,8 @@ assumes the plant is an integrator.
   \end{tikzpicture}
   \caption[Last-solve time on the mock and hardware sessions]{%
     Last-solve time on the mock and hardware sessions. The lower dashed
-    line is the requested $\qty{10}{\hz}$ period; the upper line is
+    line is the $\qty{0.1}{\second}$ period of \texttt{mpcDesiredFrequency},
+    which the bridge uses only as its warning threshold; the upper line is
     $T_{\mathrm{sol}}=\qty{1.2}{\second}$.}
   \label{fig:hw-solve}
 \end{figure}

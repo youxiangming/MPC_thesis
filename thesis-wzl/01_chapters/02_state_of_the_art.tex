@@ -55,7 +55,7 @@ families discussed below fall.
     %     circle boundaries) --------------------------------------------
     \node[lbl] at (0,2.80)      {whole-body\\inverse kinematics};
     \node[lbl] at (-1.72,1.05)  {offline\\trajectory\\optimisation};
-    \node[lbl] at (1.72,1.05)   {reactive QP-IK,\\learned policies};
+    \node[lbl] at (1.72,1.05)   {reactive\\QP-IK};
     \node[lbl] at (0,-1.95)     {single-arm \mpc{},\\base pose fixed};
     \node[lbl] at (0,-0.30)     {\textbf{whole-body}\\\textbf{\mpc{}}};
 
@@ -129,14 +129,6 @@ different categories of algorithm.
         hardware; the price is that they optimise only the current
         instant and therefore cannot trade a worse command now for a
         feasible one later.
-  \item \textbf{Learning-based schemes} replace or augment the planner
-        with a policy learned by (deep) reinforcement learning, mapping
-        observations directly to base and arm
-        commands~\cite{Honerkamp2023N2M2,Jauhri2022Reachability}.
-        Learning-based schemes move the cost of whole-body reasoning
-        from run time to training time, but they raise questions of data
-        efficiency, of reproducibility, and of transfer from simulation
-        to hardware~\cite{Iriondo2023DRL,Kang2024DoorOpening}.
 \end{itemize}
 
 \paragraph{Offline versus online.}
@@ -398,22 +390,6 @@ R1, R3, and R4. Because it optimises a single step, however, it cannot
 anticipate a constraint that will become active later in the motion,
 which is what R2 asks for over a horizon.
 
-\paragraph{Learning-based whole-body control.}
-A growing body of work hybridises classical navigation with
-reinforcement learning, training policies that map observations directly
-to base and arm commands. Honerkamp et~al.\ learn a navigation policy
-that supports arbitrary mobile-manipulation motions in unseen
-environments~\cite{Honerkamp2023N2M2}; Jauhri et~al.\ shape exploration
-with reachability priors~\cite{Jauhri2022Reachability}; Iriondo
-et~al.\ learn base-positioning policies for manipulation
-operations~\cite{Iriondo2023DRL}; and Kang et~al.\ combine a learned
-policy with adaptive position-force control for door
-opening~\cite{Kang2024DoorOpening}. These approaches satisfy R1 and R4
-and are cheap at run time, but the training data, the reproducibility of
-the resulting policy, and the transfer from simulation to hardware
-conflict with R7 and with the near-term, hardware-first goal of this
-work.
-
 % ---------------------------------------------------------------------
 \section{Comparison of Motion Planning Algorithms and Selection of a
   Suitable Algorithm}
@@ -425,7 +401,7 @@ explicit handling of joint, velocity, non-holonomic and self-collision
 constraints, deliberate redundancy resolution, online re-planning from
 the measured state, real-time feasibility on the on-board computer,
 ROS~2 interfaces, and a controller whose behaviour can be analysed on
-hardware. \Cref{tab:sota-comparison} scores the four candidate families
+hardware. \Cref{tab:sota-comparison} scores the three candidate families
 against those criteria. The scores are judgements, not measurements:
 each one is read off the published evidence cited in
 \cref{sec:sota-holistic,sec:sota-alternatives} for that family, and no
@@ -441,21 +417,20 @@ row rests on a trial run of the alternatives on \hero{}. Only the
     ($+$ good, $\circ$ partial, $-$ weak). Scores follow the evidence
     cited per family in \cref{sec:sota-holistic,sec:sota-alternatives}.}
   \label{tab:sota-comparison}
-  \begin{tabularx}{\linewidth}{@{}llcccc@{}}
+  \begin{tabularx}{\linewidth}{@{}llccc@{}}
     \toprule
     & Criterion
       & \shortstack{Sampling\\(MoveIt)}
       & \shortstack{QP-IK\\(reactive)}
-      & \shortstack{Learning\\(RL)}
       & \shortstack{Whole-body\\\mpc{} (\ocs{})} \\
     \midrule
-    R1 & Coordinated whole-body motion & $\circ$ & $+$     & $+$ & $+$     \\
-    R2 & Explicit constraint handling  & $\circ$ & $\circ$ & $-$ & $+$     \\
-    R3 & Redundancy resolution         & $\circ$ & $+$     & $+$ & $+$     \\
-    R4 & Online re-planning            & $-$     & $+$     & $+$ & $+$     \\
-    R5 & Real-time feasibility         & $\circ$ & $+$     & $+$ & $\circ$ \\
-    R6 & ROS~2 interfaces              & $+$     & $\circ$ & $-$ & $+$     \\
-    R7 & Transparency / analysability  & $+$     & $+$     & $-$ & $+$     \\
+    R1 & Coordinated whole-body motion & $\circ$ & $+$     & $+$     \\
+    R2 & Explicit constraint handling  & $\circ$ & $\circ$ & $+$     \\
+    R3 & Redundancy resolution         & $\circ$ & $+$     & $+$     \\
+    R4 & Online re-planning            & $-$     & $+$     & $+$     \\
+    R5 & Real-time feasibility         & $\circ$ & $+$     & $\circ$ \\
+    R6 & ROS~2 interfaces              & $+$     & $\circ$ & $+$     \\
+    R7 & Transparency / analysability  & $+$     & $+$     & $+$     \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -464,9 +439,7 @@ Sampling-based planning is mature and well supported but computes its
 trajectory before execution and, in its standard form, keeps base and
 arm separate, which disqualifies it as the primary whole-body planner
 while keeping it relevant as the incumbent alternative. Reactive QP-IK
-meets every requirement except the horizon in R2. Learning-based control
-is attractive in principle but conflicts with R7 and with the near-term,
-hardware-first goals of this work. Whole-body \mpc{} is the only family
+meets every requirement except the horizon in R2. Whole-body \mpc{} is the only family
 that satisfies R1 to R4 simultaneously; its weak point is R5, the
 computational burden of solving an optimal-control problem online, which
 is addressed through the MPC--MRT split and a distributed deployment

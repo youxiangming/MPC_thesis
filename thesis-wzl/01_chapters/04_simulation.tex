@@ -105,7 +105,77 @@ $t_{\mathrm{lag}}$ is the quantity that can be compared with the
 policy-lag diagnostic of the MRT bridge
 (\cref{sec:hw-challenges}); the dummy has no such lag, so a large
 $t_{\mathrm{lag}}$ there would mean the optimiser is chronically behind
-its own reference.
+its own reference. \Cref{fig:ee-error-decomp} shows the decomposition on
+one measured edge.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      note/.style={font=\scriptsize, align=left},
+      cmd/.style={line width=1.1pt, RWTHBlau100},
+      att/.style={line width=1.1pt, RWTHOrange100, densely dashed},
+      comp/.style={-{Latex[length=1.6mm]}, thick},
+      pt/.style={circle, fill, inner sep=0pt, minimum size=1.7mm},
+      hollow/.style={circle, draw, fill=white, inner sep=0pt,
+                     minimum size=1.7mm},
+    ]
+    % --- commanded edge ----------------------------------------------
+    \draw[cmd] (0,0) -- (9.2,0);
+    \draw[cmd, -{Latex[length=2mm]}] (7.9,0) -- (9.2,0);
+    \node[lbl, anchor=south west, text=RWTHBlau100] at (0,0.55)
+      {commanded edge of the box, path speed $v_{\mathrm{ref}}$};
+    \node[lbl, anchor=south] at (8.5,0.12) {$\symbf{\tau}$};
+
+    % --- attained path ------------------------------------------------
+    \draw[att] (0.1,-1.52) .. controls (1.5,-1.40) and (2.8,-1.25)
+      .. (3.8,-1.15) .. controls (5.6,-0.97) and (7.2,-0.82)
+      .. (8.8,-0.72);
+    \node[lbl, anchor=north west, text=RWTHOrange100] at (0.1,-1.58)
+      {attained path};
+
+    % --- the three points ---------------------------------------------
+    \node[pt, RWTHBlau100]           (pd) at (6.3,0)     {};
+    \node[hollow, draw=RWTHBlau100]  (pf) at (3.8,0)     {};
+    \node[pt, RWTHOrange100]         (pa) at (3.8,-1.15) {};
+
+    \node[lbl, anchor=south] at (3.8,0.12)
+      {$\symbf{p}_{\mathrm{d}}(t - t_{\mathrm{lag}})$};
+    \node[lbl, anchor=north west] at (6.42,0.04)
+      {$\symbf{p}_{\mathrm{d}}(t)$};
+    \node[lbl, anchor=north] at (3.35,-1.42)
+      {$\symbf{p}_{\mathrm{a}}(t)$};
+
+    % --- decomposition -------------------------------------------------
+    \draw[comp] (pa) -- (pf) node[lbl, midway, left=1mm] {$e_{\perp}$};
+    \draw[comp] (pf) -- (pd) node[lbl, midway, above=0.5mm] {$e_{\parallel}$};
+    \draw[comp, densely dotted] (pa) -- (pd);
+    \node[lbl, anchor=north west] at (5.78,-0.30)
+      {$e_{\mathrm{p}} = \lVert \symbf{e} \rVert$};
+    \draw (3.8,-0.25) -- (4.05,-0.25) -- (4.05,0);
+
+    % --- notes ----------------------------------------------------------
+    \node[note, anchor=north west, text width=112mm] at (0,-2.05)
+      {$e_{\parallel} > 0$: the \ee{} trails the reference along the edge, by
+       the time $t_{\mathrm{lag}} = e_{\parallel}/v_{\mathrm{ref}}$ of
+       \cref{eq:lag-eff}; the hollow marker is where the reference was
+       $t_{\mathrm{lag}}$ earlier. $e_{\perp}$: the part of the error that
+       lies off the commanded edge, which no lag accounts for.};
+  \end{tikzpicture}
+  \caption[Decomposition of the time-aligned \ee{} position error]{%
+    Decomposition of the time-aligned \ee{} position error on one measured
+    edge. Desired and attained positions are taken from the same \mpc{}
+    observation (\cref{sec:sim-metrology}), so both points belong to the
+    same instant $t$. The error splits along the unit tangent
+    $\symbf{\tau}$ of the edge into an along-track component
+    $e_{\parallel}$, which \cref{eq:lag-eff} converts into the equivalent
+    time $t_{\mathrm{lag}}$, and a cross-track remainder $e_{\perp}$. The
+    split matters on hardware because $t_{\mathrm{lag}}$ can be compared
+    with the measured policy lag of the MRT bridge
+    (\cref{sec:hw-challenges}) while $e_{\perp}$ cannot.}
+  \label{fig:ee-error-decomp}
+\end{figure}
 
 These samples are only admitted on the measured path. The waypoint node
 tags every metric with a segment identifier: \texttt{segment\_id} $\ge
@@ -139,7 +209,7 @@ is~\cite{Huttenlocher1993Hausdorff}
 The directed distance $h(B,A)$ is small whenever every attained sample
 lies near the command, including the degenerate case of a robot that
 stops halfway; $h(A,B)$ penalises shortcuts and unfinished laps. Both
-directions are required. The classical $\max$ is sensitive to a single
+directions are required, as \cref{fig:hausdorff-directions} shows. The classical $\max$ is sensitive to a single
 spike, so results are also reported with a mean nearest-neighbour form
 in the spirit of the modified Hausdorff
 distance~\cite{Dubuisson1994ModifiedHausdorff},
@@ -154,6 +224,73 @@ the raw $H(A,B)$. The command path is resampled at a spacing well below
 the expected error (one millimetre is enough for the box of
 \cref{sec:sim-dummy}) before the nearest-neighbour search, otherwise
 four or eight corners would inflate every distance.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      cmd/.style={line width=1.1pt, RWTHBlau100},
+      att/.style={line width=1.1pt, RWTHOrange100, densely dashed},
+      dist/.style={{Latex[length=1.5mm]}-{Latex[length=1.5mm]}, thick},
+    ]
+    % --- legend --------------------------------------------------------
+    \draw[cmd] (0,3.55) -- (0.6,3.55);
+    \node[lbl, anchor=west] at (0.72,3.55) {commanded point set $A$};
+    \draw[att] (5.5,3.55) -- (6.1,3.55);
+    \node[lbl, anchor=west] at (6.22,3.55) {attained point set $B$};
+
+    % =================================================================
+    % (a) both laps complete
+    % =================================================================
+    \begin{scope}[shift={(0,0)}]
+      \draw[cmd] (0,0) -- (4.2,0) -- (4.2,3.0);
+      \draw[att] (0,-0.45) -- (2.90,-0.42) -- (4.70,1.40) -- (4.70,3.00);
+
+      % h(A,B): the worst commanded point is the corner, which B cuts
+      \draw[dist] (4.2,0) -- (3.75,0.44);
+      \node[lbl, anchor=west] at (4.34,-0.12) {$h(A,B)$};
+      % h(B,A): the worst attained point is the outward offset leg
+      \draw[dist] (4.70,2.10) -- (4.20,2.10);
+      \node[lbl, anchor=west] at (4.82,2.10) {$h(B,A)$};
+
+      \node[lbl, anchor=north, text width=52mm] at (2.1,-0.95)
+        {(a) both laps complete: the two directed distances are of
+         comparable size};
+    \end{scope}
+
+    % =================================================================
+    % (b) the attained path stops halfway
+    % =================================================================
+    \begin{scope}[shift={(8.8,0)}]
+      \draw[cmd] (0,0) -- (4.2,0) -- (4.2,3.0);
+      \draw[att] (0,-0.20) -- (2.10,-0.18);
+      \draw[thick] (1.98,-0.31) -- (2.22,-0.05);
+      \draw[thick] (1.98,-0.05) -- (2.22,-0.31);
+      \node[lbl, anchor=north west] at (2.26,-0.26) {motion stops};
+
+      % h(A,B): the unvisited far end of A has no attained sample nearby
+      \draw[dist] (4.2,3.0) -- (2.10,-0.18);
+      \node[lbl, anchor=east] at (2.95,1.60) {$h(A,B)$};
+      % h(B,A): every attained sample lies close to A
+      \draw[dist] (1.00,-0.19) -- (1.00,0);
+      \node[lbl, anchor=north east] at (0.90,-0.28) {$h(B,A)$};
+
+      \node[lbl, anchor=north, text width=52mm] at (2.1,-0.95)
+        {(b) the attained path stops halfway: only $h(A,B)$ exposes it};
+    \end{scope}
+  \end{tikzpicture}
+  \caption[Both directed Hausdorff distances are required]{%
+    Why \cref{eq:hausdorff} needs both directed distances. In (a) the
+    attained path cuts the corner and bulges outside the command, and the
+    two directions report deviations of similar size. In (b) the robot
+    covers the first part of the path and stops: every attained sample
+    still lies close to the command, so $h(B,A)$ stays small, while
+    $h(A,B)$ grows to the distance from the unvisited far end of $A$ to
+    the nearest attained sample. Reporting $h(B,A)$ alone would rank the
+    unfinished lap in (b) above the complete one in (a).}
+  \label{fig:hausdorff-directions}
+\end{figure}
 
 ISO~9283 defines path accuracy $\mathrm{AT}_{p}$ along a commanded path
 as the maximum, over the path, of the distance between that command and
@@ -340,6 +477,8 @@ $e_{\mathrm{o}}$ that is not the controller's.
       lead/.style={thick, RWTHOrange100},
       pnt/.style={circle, fill=RWTHBlau100, inner sep=1.2pt},
       lbl/.style={font=\scriptsize},
+      sid/.style={font=\tiny, text=RWTHBlau100, inner sep=1.2pt},
+      sidlead/.style={font=\tiny, text=RWTHOrange100, inner sep=1.2pt},
     ]
     % scale: 1 m = 4.2 cm; x right = robot forward, y up = robot left
     \def\s{4.2}
@@ -355,6 +494,7 @@ $e_{\mathrm{o}}$ that is not the controller's.
     \coordinate (P6) at ($(P3)+(off)$);
     \coordinate (P5) at ($(P4)+(off)$);
     \coordinate (Lin) at ({0.25*\s}, {-0.10*\s});
+    \coordinate (Lout) at ($(P1)-(0.33,0.42)$);
     % top rectangle (dashed) then bottom (solid), then verticals
     \draw[boxedge, dashed] (P8) -- (P7) -- (P6) -- (P5) -- cycle;
     \draw[boxedge] (P1) -- (P2) -- (P3) -- (P4) -- cycle;
@@ -363,15 +503,24 @@ $e_{\mathrm{o}}$ that is not the controller's.
     \draw[zedge] (P3) -- (P6);
     \draw[zedge] (P4) -- (P5);
     % measured Hamiltonian: P1-P2-P3-P4-P5-P6-P7-P8-P1
-    \draw[->, very thick, RWTHBlau100] (P1) -- (P2);
-    \draw[->, very thick, RWTHBlau100] (P2) -- (P3);
-    \draw[->, very thick, RWTHBlau100] (P3) -- (P4);
-    \draw[->, very thick, RWTHBlau100] (P4) -- (P5);
-    \draw[->, very thick, RWTHBlau100] (P5) -- (P6);
-    \draw[->, very thick, RWTHBlau100] (P6) -- (P7);
-    \draw[->, very thick, RWTHBlau100] (P7) -- (P8);
-    \draw[->, very thick, RWTHBlau100] (P8) -- (P1);
+    \draw[->, very thick, RWTHBlau100] (P1) -- (P2)
+      node[sid, midway, below] {1};
+    \draw[->, very thick, RWTHBlau100] (P2) -- (P3)
+      node[sid, midway, left] {2};
+    \draw[->, very thick, RWTHBlau100] (P3) -- (P4)
+      node[sid, midway, above] {3};
+    \draw[->, very thick, RWTHBlau100] (P4) -- (P5)
+      node[sid, midway, left] {4};
+    \draw[->, very thick, RWTHBlau100] (P5) -- (P6)
+      node[sid, midway, above] {5};
+    \draw[->, very thick, RWTHBlau100] (P6) -- (P7)
+      node[sid, midway, left] {6};
+    \draw[->, very thick, RWTHBlau100] (P7) -- (P8)
+      node[sid, midway, above] {7};
+    \draw[->, very thick, RWTHBlau100] (P8) -- (P1)
+      node[sid, midway, right] {8};
     \draw[lead, ->] (Lin) -- (P1);
+    \draw[lead, ->] (P1) -- (Lout);
     \foreach \p/\n/\a in {
       P1/P1/above, P2/P2/above, P3/P3/below,
       P4/P4/below, P5/P5/left, P6/P6/right,
@@ -380,7 +529,9 @@ $e_{\mathrm{o}}$ that is not the controller's.
       \node[lbl, \a] at (\p) {\n};
     }
     \node[pnt, fill=RWTHOrange100] at (Lin) {};
-    \node[lbl, above left] at (Lin) {lead-in};
+    \node[pnt, fill=RWTHOrange100] at (Lout) {};
+    \node[sidlead, above left=-1pt] at (Lin) {lead-in $-10$};
+    \node[sidlead, below left=-1pt] at (Lout) {lead-out $-11$};
     \node[lbl, anchor=west] at (5.0, -3.6)
       {solid: $z=\qty{1.30}{\meter}$; dashed: $z=\qty{1.55}{\meter}$};
     \node[lbl, anchor=west] at (5.0, -4.05)
@@ -388,12 +539,17 @@ $e_{\mathrm{o}}$ that is not the controller's.
   \end{tikzpicture}
   \caption[Eight-corner commanded path for Experiment~A]{%
     Commanded parallelepiped in the \ee{}-anchored frame of
-    \texttt{experiment\_a\_waypoints.yaml}. Blue arrows are the
-    measured Hamiltonian cycle (segment identifiers $1$--$8$). The
-    orange stub is the ISO~9283 cl.~8.2 lead-in~\cite{ISO9283}; the
-    lead-out continues
-    \qty{0.15}{\meter} down from P1 along the closing $z$ edge and is
-    omitted here.}
+    \texttt{experiment\_a\_waypoints.yaml}, carrying the segment
+    identifiers that the waypoint node publishes with every metric
+    (\cref{fig:sim-phases}). Blue arrows are the measured Hamiltonian
+    cycle, tagged $1$ to $8$ in the order they are traversed; these are
+    the samples that post-processing keeps. The orange stubs are the
+    ISO~9283 cl.~8.2 lead legs~\cite{ISO9283}, tagged $-10$ and $-11$:
+    the lead-in runs \qty{0.15}{\meter} along the backward extension of
+    P1--P2, and the lead-out continues \qty{0.15}{\meter} down from P1
+    along the closing $z$ edge, to $z=\qty{1.15}{\meter}$. The approach
+    from the standby pose to the lead-in point is tagged $0$ and is not
+    part of the geometry shown.}
   \label{fig:sim-box}
 \end{figure}
 
@@ -455,6 +611,80 @@ phase sequence is $\mathrm{Init}\to\mathrm{Hold}\to
 \mathrm{Approaching}\to\mathrm{Running}\to\mathrm{Finished}$.
 \texttt{auto\_start} is false: the box is drawn in RViz first, and a
 service call starts the motion after a visual check.
+\Cref{fig:sim-phases} shows the phases, the reference each one
+publishes and the segment identifier it tags.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\scriptsize,
+      st/.style={draw, rounded corners=2pt, align=left, inner sep=3pt,
+                 text width=34mm, minimum height=12.5mm, fill=gray!10},
+      ref/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                  text width=50mm, minimum height=12.5mm},
+      seg/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                  text width=38mm, minimum height=12.5mm},
+      keep/.style={seg, draw=RWTHOrange100, thick},
+      noseg/.style={seg, draw=none},
+      tstep/.style={-{Latex[length=2mm]}, thick},
+      tr/.style={font=\scriptsize, align=center, fill=white, inner sep=1.5pt},
+      hd/.style={font=\scriptsize\itshape, align=left},
+    ]
+    % --- column headers ------------------------------------------------
+    \node[hd, anchor=south west] at (0,1.0)    {phase};
+    \node[hd, anchor=south west] at (4.4,1.0)  {what the reference does};
+    \node[hd, anchor=south west] at (10.2,1.0) {\texttt{segment\_id} published};
+    \draw[gray] (0,0.9) -- (14.2,0.9);
+
+    % --- rows -------------------------------------------------------------
+    \foreach \y/\name/\what/\sid/\kind [count=\i] in {%
+      0/\texttt{Init}/%
+        {the node is up and the first observation is accepted; the box and
+         the orange lead legs are drawn in RViz}/{}/{noseg},
+      -1.85/\texttt{Hold}/%
+        {the reference is pinned at the lead-in point}/{}/{noseg},
+      -3.70/\texttt{Approaching}/%
+        {the \ee{} travels to the lead-in point while the gate watches the
+         distance to it}/%
+        {$0$: the approach from the current \ee{} to the entry point}/{seg},
+      -5.55/\texttt{Running}/%
+        {the time-parameterised trajectory runs on the \ocs{} time axis and
+         is re-published at \qty{1}{\hz}}/%
+        {$-10$ lead-in, then $1$--$8$ on the measured edges, then $-11$
+         lead-out}/{keep},
+      -7.40/\texttt{Finished}/%
+        {the reference holds at the end of the lead-out;
+         \texttt{return\_to\_home} is false, so no park leg follows}/%
+        {a negative identifier; $-12$, the park leg, stays unused}/{seg}%
+    }{
+      \node[st,   anchor=north west] (s\i) at (0,\y)    {\name};
+      \node[ref,  anchor=north west]       at (4.4,\y)  {\what};
+      \node[\kind, anchor=north west]      at (10.2,\y) {\sid};
+    }
+
+    % --- transitions -------------------------------------------------------
+    \foreach \a/\b in {1/2, 2/3, 3/4, 4/5}{
+      \draw[tstep] (s\a.south) -- (s\b.north);
+    }
+    \node[tr] at ($(s1.south)!0.5!(s2.north)$) {\texttt{/start}};
+    \node[tr] at ($(s3.south)!0.5!(s4.north)$)
+      {$e_{\mathrm{p}} \le \qty{0.02}{\meter}$ for $\qty{0.3}{\second}$};
+    \node[tr] at ($(s4.south)!0.5!(s5.north)$) {lead-out reached};
+  \end{tikzpicture}
+  \caption[Phase sequence of the waypoint node]{%
+    Phase sequence of the waypoint node, with the reference it publishes
+    in each phase and the segment identifier that tags the metrics.
+    \texttt{auto\_start} is false, so \texttt{Init} waits for the operator
+    to call \texttt{/start} after checking the landed box in RViz. The gate
+    between \texttt{Approaching} and \texttt{Running} keeps the motion from
+    standby out of the first measured edge; it tests position only, so a
+    residual orientation error at entry is admitted into that edge
+    (\cref{sec:hw-deployment}). Only the identifiers in the highlighted
+    row survive post-processing: the metrics of \cref{tab:sim-metrics} are
+    computed on $\texttt{segment\_id} \ge 1$, which is why the approach and
+    the two lead legs carry identifiers of their own.}
+  \label{fig:sim-phases}
+\end{figure}
 
 ISO~9283 cl.~8.2 requires the programmed start and end to lie outside
 the test path~\cite{ISO9283}. A lead-in of \qty{0.15}{\meter} is placed
@@ -484,8 +714,10 @@ position term are what push the solver to reach the far corners by
 driving the platform instead of stretching the arm towards its reach
 limit. The file also lengthens the horizon from \qty{1.2}{\second} to
 $T=\qty{1.3}{\second}$ and the solution time window from
-\qty{1.0}{\second} to $T_{\mathrm{sol}}=\qty{1.2}{\second}$; solve and
-evaluation rates stay at \qty{10}{\hz} and \qty{100}{\hz}. The dummy
+\qty{1.0}{\second} to $T_{\mathrm{sol}}=\qty{1.2}{\second}$. Solve and
+loop rates stay at \qty{10}{\hz} and \qty{100}{\hz}; the loop rate is
+twice the \qty{50}{\hz} that \texttt{task\_hardware.info} now uses on the
+robot (\cref{sec:hw-interfaces}). The dummy
 therefore validates that operating point, not the everyday hardware
 tune.
 

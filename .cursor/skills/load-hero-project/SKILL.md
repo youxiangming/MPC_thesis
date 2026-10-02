@@ -104,12 +104,14 @@ find /home/xy/thinking \( -name '*.md' -o -name '*.canvas' \) \
 | 笔记 | 对应论文 |
 |------|----------|
 | `Ros build.md` | **每次必读（优先）**：IPC/PC 启动、Experiment A、rosbag、Zenoh、chrony 对时、求解时间/policy lag 日志。写 Ch.3/4/5 部署与实验步骤时对照。文件很长：按本章关键词检索，不要整份灌进上下文。 |
+| `thesis/claude 云端讨论总结.md` | **小论文/全文叙事总账（广而不细）**：问题→根因→处理→状态→章节映射；§7 列出已知矛盾。补充用，**不是**数字/架构权威。 |
+| `thesis/OCS2 在 Hero 移动机械臂真机部署——调试记录与论文素材.md` | 同上云端讨论的**细化**版：policy exhaustion 因果链、UR 力矩表述、Release/CppAD、求解时间归因。细节优先读此文件，事实仍回仓库核对。 |
 | `thesis/实验收集数据.md` | Ch.4/5 实验设计、Hausdorff/ISO 9283、waypoint |
 | `thesis/项目概况与问题解决汇总.md` | Ch.3/5 问题–对策素材 |
 | `thesis/Outline.md` | 章节结构草稿（核对，不覆盖现有 LaTeX 结构） |
 | `问题收集.md` | Ch.3/5 未收口的问题清单（很长：检索本章关键词） |
 | `真机报错信息以及解决方案.md` | Ch.5 真机故障 |
-| `小论文素材_问题与解决方案汇总.md` | 研讨课/全文叙事素材 |
+| `小论文素材_问题与解决方案汇总.md` | 研讨课/全文叙事素材（可能含过时双部署描述，以 bridge-on-IPC 记忆为准） |
 | `最新分布式部署启动方案.md`、`ocs2_distributed_deployment_diagnosis.md`、`ocs2-distributed-reset-analysis.md`、`ocs2-deployment-analysis.md` | Ch.3 分布式 / Zenoh / reset |
 | `hero-bringup-hardware-control.md`、`调试步骤.md` | Ch.5 bring-up |
 | `self-collision.md`、`优化时间.md` | Ch.3 约束与求解时间 |
@@ -119,6 +121,7 @@ find /home/xy/thinking \( -name '*.md' -o -name '*.canvas' \) \
 
 - 笔记里的数字、拓扑、「当前架构」必须回 `/home/xy/hero-ros2` 复核后再写进正文。
 - 笔记日期可能早于代码；冲突时以代码/`task_hardware.info` 为准，并在 brief 里点出笔记已过时。
+- **云端讨论两篇**：只作叙事/动机/章节钩子；权威优先级与本 skill §Rules 一致——`task_hardware.info` > 设计文档 > `HANDOFF.md` > thinking vault（含云端总结）。两篇互证时细节看 OCS2 部署素材，广度看 `claude 云端讨论总结.md`。
 
 ## 章节 ↔ 事实源映射（写作时对照）
 

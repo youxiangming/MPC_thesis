@@ -25,9 +25,9 @@ contributions were delivered.
 First, a whole-body motion-planning approach was selected for the
 \hero{} platform after comparing \ocs{} with alternative frameworks
 (\cref{ch:sota}). Second, \ocs{} was integrated into the existing
-software stack: a split host/on-board deployment over Zenoh keeps the
-actuation path local to the IPC while the SLQ solver runs on a
-workstation (\cref{sec:distributed-arch}); a nine-state kinematic model
+software stack: a deployment over Zenoh keeps the actuation path local
+to the IPC while the SLQ solver runs on an
+external PC (\cref{sec:distributed-arch}); a nine-state kinematic model
 with non-holonomic base, safety-panel joint limits, and a reduced
 self-collision set was parameterised for on-robot operation (\cref{sec:wholebody-model});
 and an MRT bridge turns the published policy into wheel and joint
@@ -51,7 +51,7 @@ remained at one to two decimetres on the long edges and did not collapse
 during corner dwells (\cref{fig:hw-error,tab:hw-segments}). The loop
 therefore ran in real time in the sense of \cref{eq:rt-invariant}---no
 policy-exhaustion hold occurred on the hardware lap---but the effective
-\mpc{} rate was about \qty{4.4}{\hz} against a \qty{10}{\hz} request, and
+\mpc{} rate was about \qty{4.4}{\hz}, set by the solve time, and
 the first one to two tenths of a second of each plan were lost to solve
 time and network delay before the bridge could apply them
 (\cref{fig:hw-lag}). Along-track lag consistent with that delay explains
@@ -65,7 +65,7 @@ the scores measure internal consistency of the closed loop, not absolute
 accuracy in the hall. Each plant was exercised once, at
 $v_{\mathrm{ref}}=\qty{0.05}{\meter\per\second}$, without the three
 mandatory ISO speed levels or repeated cycles~\cite{ISO9283}. The
-workstation was connected by Ethernet throughout
+PC was connected by Ethernet throughout
 (\cref{sec:hw-deployment}); the numbers therefore do not speak to
 control over the platform's wireless link. The \ocs{} model treats the
 base as a velocity integrator and knows nothing of the drive
@@ -76,6 +76,91 @@ Nav2 plus MoveIt baseline was run on the same path, so the thesis
 validates whole-body execution and characterises its residual; it does
 not yet demonstrate superiority over sequential planning on identical
 metrics~\cite{Macenski2020Nav2,moveit2}.
+
+\Cref{fig:requirements-trace} collects the requirements R1 to R7 of
+\cref{tab:requirements}, what realises each one in the integrated system,
+and the evidence reported above for it.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\scriptsize,
+      req/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                  text width=33mm, minimum height=12.5mm},
+      real/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                   text width=44mm, minimum height=12.5mm, fill=gray!10},
+      evid/.style={draw, rounded corners=1pt, align=left, inner sep=3pt,
+                   text width=44mm, minimum height=12.5mm},
+      flow/.style={-{Latex[length=1.5mm]}, gray},
+      hd/.style={font=\scriptsize\itshape, align=left},
+      st/.style={font=\Large},
+    ]
+    % --- column headers ------------------------------------------------
+    \node[hd, anchor=south west] at (0,1.0)   {requirement};
+    \node[hd, anchor=south west] at (3.95,1.0) {realised as};
+    \node[hd, anchor=south west] at (9.0,1.0)  {evidence in this thesis};
+    \node[hd, anchor=south] at (14.15,1.0)     {status};
+    \draw[gray] (0,0.9) -- (14.5,0.9);
+
+    % --- rows -----------------------------------------------------------
+    \foreach \y/\id/\name/\how/\what/\sym [count=\i] in {%
+      0/R1/{Coordinated base--arm motion}/%
+        {one optimisation over $\svec \in \mathbb{R}^{9}$,
+         $\uvec \in \mathbb{R}^{8}$ (\cref{eq:state-input})}/%
+        {the eight-corner lap completes on mock hardware and on the robot
+         (\cref{fig:hw-path})}/{$+$},
+      -1.5/R2/{Explicit constraint handling}/%
+        {relaxed barriers on joint limits, velocity bounds and twelve
+         link pairs (\cref{eq:barrier})}/%
+        {configured and active in every session; satisfaction is not
+         measured separately}/{$\circ$},
+      -3.0/R3/{Deliberate redundancy resolution}/%
+        {the input-cost ratio $R_\mathrm{base} : R_\mathrm{arm}$
+         (\cref{fig:cost-structure})}/%
+        {lowered for Experiment~A so that the base reaches the far
+         corners (\cref{sec:sim-node})}/{$\circ$},
+      -4.5/R4/{Online re-planning from the measured state}/%
+        {a re-solve from the bridge observation in every cycle
+         (\cref{fig:bridge-cycle})}/%
+        {\qty{4.4}{\hz} effective against the \qty{10}{\hz} request
+         (\cref{sec:hw-challenges})}/{$\circ$},
+      -6.0/R5/{Real-time feasibility on the on-board computer}/%
+        {the solver runs on the external PC, the MRT bridge on the IPC
+         (\cref{fig:architecture})}/%
+        {\cref{eq:rt-invariant} holds on the robot lap, with the solver
+         off-board rather than on the IPC}/{$\circ$},
+      -7.5/R6/{ROS~2 interfaces}/%
+        {the MRT bridge publishes onto \texttt{ros2\_control} and
+         \texttt{twist\_mux} (\cref{sec:hw-interfaces})}/%
+        {the production stack runs with two deliberate deviations
+         (\cref{sec:hw-interfaces})}/{$+$},
+      -9.0/R7/{Transparency and analysability}/%
+        {solver and policy-lag diagnostics, \texttt{ee\_metrics} at
+         \qty{20}{\hz} with segment tags (\cref{sec:sim-metrology})}/%
+        {\cref{fig:hw-lag,fig:hw-solve,fig:hw-error} are read from those
+         streams}/{$+$}%
+    }{
+      \node[req,  anchor=north west] (q\i) at (0,\y)    {\textbf{\id}~\name};
+      \node[real, anchor=north west] (h\i) at (3.95,\y) {\how};
+      \node[evid, anchor=north west] (e\i) at (9.0,\y)  {\what};
+      \node[st, anchor=center] at (14.15,\y-0.625)      {\sym};
+      \draw[flow] (q\i.east) -- (h\i.west);
+      \draw[flow] (h\i.east) -- (e\i.west);
+    }
+  \end{tikzpicture}
+  \caption[Requirements R1 to R7 against the evidence this thesis
+    provides]{%
+    The requirements of \cref{tab:requirements}, what realises each one in
+    the integrated system, and the evidence this thesis offers for it. The
+    symbols are those of \cref{tab:sota-comparison}: $+$ met, $\circ$ met
+    in part. R2 and R3 are implemented and in use, but no measurement
+    scores them on their own. R4 is met at a lower rate than requested. R5
+    is the requirement whose wording the deployment does not meet: the loop
+    satisfies \cref{eq:rt-invariant}, yet it does so because the solver was
+    moved off the on-board computer, so the requirement holds for the robot
+    as a whole and not for the IPC.}
+  \label{fig:requirements-trace}
+\end{figure}
 
 % ---------------------------------------------------------------------
 \section{Critical Reflection}
@@ -141,8 +226,9 @@ recorded numbers, rather than merely widen the solution time window.
 
 \paragraph{Raise the effective \mpc{} rate and shorten policy lag.}
 Mean solve time on the hardware session was \qty{227}{\milli\second}
-(\cref{tab:hw-metrics}), so the controller replans at roughly half the
-configured \qty{10}{\hz}. The DDP benchmark that \ocs{} prints at
+(\cref{tab:hw-metrics}), so the controller replans at roughly
+\qty{4.4}{\hz}, a rate set by the solve time rather than by the task
+file (\cref{sec:hw-interfaces}). The DDP benchmark that \ocs{} prints at
 shutdown attributes that time to two stages above all. In an earlier
 instrumented session on the same node, summarised over $1794$
 iterations, \emph{Initialization} averaged \qty{170}{\milli\second} per
@@ -152,7 +238,7 @@ backward pass stayed below \qty{1}{\milli\second}. The absolute values
 belong to that session rather than to the laps of \cref{ch:hardware},
 but the split suggests attacking warm-start cost and rollout search
 before adding SLQ iterations. Pinning the solver threads
-away from unrelated workstation load, keeping the Release build used here,
+away from unrelated PC load, keeping the Release build used here,
 and revisiting the twelve-pair self-collision set if distance queries
 still dominate are practical first steps. Enabling a feedback policy
 (\texttt{useFeedbackPolicy=true} in the task file; currently disabled in

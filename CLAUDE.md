@@ -32,6 +32,12 @@ which `.bib` file, key convention, which `\cite` commands compile here) and
 3. **Where neither says anything**, follow the project conventions already
    recorded in the reference files, and keep them consistent.
 
+**Vault / cloud-discussion notes** (`/home/xy/thinking/thesis/claude 云端讨论总结.md`
+and the finer OCS2 deployment note) are narrative supplements for 小论文/thesis
+only. Numbers, topology, and "current architecture" always follow live
+`/home/xy/hero-ros2` (especially `task_hardware.info`) and settled project
+memory. Full rule: `.cursor/rules/thinking-notes-source.mdc`.
+
 One caveat on level 2: check that an instruction actually works against this
 template before applying it. The supervisor suggested `\citep`, which is a
 natbib command and does not compile here.

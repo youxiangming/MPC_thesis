@@ -13,6 +13,7 @@ Terminology must be identical across all chapters. This file fixes *names and ph
 | OCS2 | ocs2, Ocs2 | Cite the framework at first mention |
 | DDP/SLQ solver | "the optimizer" | Pick one name after first definition and stay with it |
 | MPC–MRT interface / the MRT bridge | "the tracking node" | Expand MRT once |
+| the PC (off-board), the IPC (on-board) | "the workstation", "the host" | The off-board machine is the author's own PC. Introduce both together once: "An industrial PC (IPC) inside the platform …; an external PC joins the subnet …". Do not rename "workstations" in Ch. 1 — those are assembly stations. |
 | end-effector (EE) pose error | "tracking error" alone | Specify the reference frame when first defined |
 | policy exhaustion | "policy timeout" | The solve-time-exceeds-window failure mode |
 | ISO 9283:1998 | "the ISO standard" | Use the standard's own metric symbols (AT_p, RT_p, …) |
