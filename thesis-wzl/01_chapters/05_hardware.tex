@@ -523,12 +523,11 @@ the platform before this lap, not a localisation in the hall. Closed-loop
 drift of the attained path relative to its own start was
 \qty{15}{\centi\meter} on the robot and \qty{11}{\centi\meter} on the
 mock, most of it in $z$ at the last vertical edge rather than a planar
-loop-closure error. None of this is an ISO accuracy statement; an
-external \ee{} pose is still missing. Second, each plant was run once, at
-one speed, without a decoupled baseline. Repeatability $\mathrm{RT}_{p}$,
-the three speed levels of ISO Table~3, and a Nav2 plus MoveIt comparison
-are outside the present
-data~\cite{ISO9283,Macenski2020Nav2,moveit2}.
+loop-closure error. None of this is an absolute accuracy statement in
+the hall. Second, each plant was run once, at one speed, without a
+decoupled baseline. Repeatability $\mathrm{RT}_{p}$, the three speed
+levels of ISO Table~3, and a Nav2 plus MoveIt comparison are outside the
+present data~\cite{ISO9283,Macenski2020Nav2,moveit2}.
 
 What the pair of laps does show is narrower. The Experiment~A files that
 the dummy accepted can be executed by the hardware stack from approaching
@@ -537,6 +536,5 @@ lag with the robot, tracks at a few centimetres and at an along-track
 delay consistent with policy lag. The physical platform, with the same
 files, tracks at one to two decimetres and does not catch the reference
 during dwell. The next improvements that would change those numbers are
-a shorter solve (so that $u(\tau=0)$ is no longer in the past), a model
-that knows the base cannot step in velocity, and an external pose of the
-\texttt{tool0} frame.
+a shorter solve (so that $u(\tau=0)$ is no longer in the past) and a
+model that knows the base cannot step in velocity.

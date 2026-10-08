@@ -32,30 +32,35 @@ bus. The arm is mounted \qty{0.830}{\meter} above the ground on a plate
 offset by \qty{-0.355}{\meter} in $x$ and \qty{-0.050}{\meter} in $y$
 from the base origin and rotated by \ang{-90} about the vertical axis,
 so that the shoulder sits roughly at the height of a workpiece carrier.
-\Cref{fig:hero-photo} shows the platform from the front and from the
-rear.
+\Cref{fig:hero-photo} shows the platform from three sides.
 
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[t]{0.48\textwidth}
+  \begin{subfigure}[t]{0.27\textwidth}
     \centering
-    \includegraphics[height=9cm]{hero_photo_front.jpg}
-    \caption{Front side with the arm, the teach pendant on the top
-      plate and the red drive unit of the base.}
+    \includegraphics[width=\textwidth]{hero_view_front.jpg}
+    \caption{Front}
     \label{fig:hero-photo-front}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[t]{0.48\textwidth}
+  \begin{subfigure}[t]{0.34\textwidth}
     \centering
-    \includegraphics[height=9cm]{hero_photo_rear.jpg}
-    \caption{Rear side with the operator panel next to the shoulder and
-      the UR control box inside the chassis.}
+    \includegraphics[width=\textwidth]{hero_view_side.jpg}
+    \caption{Side}
+    \label{fig:hero-photo-side}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.27\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{hero_view_back.jpg}
+    \caption{Rear}
     \label{fig:hero-photo-rear}
   \end{subfigure}
-  \caption{The \hero{} platform: UR10e arm on the \emph{freeMoVe} base.
-    The operator panel in (b) is the \texttt{hmi} link of the kinematic
-    description and one of the two platform parts that the arm can
-    reach (\cref{sec:wholebody-model}).}
+  \caption{The \hero{} platform: UR10e arm on the \emph{freeMoVe} base
+    with its red drive unit. The teach pendant lies on the top plate in
+    (a) and (b). The operator panel next to the shoulder in (c) is the
+    \texttt{hmi} link of the kinematic description; the UR control box
+    sits inside the chassis below it.}
   \label{fig:hero-photo}
 \end{figure}
 
@@ -393,18 +398,15 @@ the arm joints~\cite{Lynch2017ModernRobotics},
 
 which encodes the non-holonomic restriction of
 \cref{sec:hero-platform}: no input produces motion along the base
-$y$-axis. The model is kinematic, not dynamic. In the control chain used
-here, neither actuator group receives a force or torque command: the
-drive controller takes a twist, and the arm is driven by the
-joint-trajectory controller with position setpoints at a fixed rate. The
-UR driver also loads an effort controller for the software version of
-this arm (PolyScope~5.24), but that controller stays inactive in this
-work. No validated inertial parameters exist for the loaded platform
-either. A dynamic model would therefore add eight velocity states ($v$,
-$\omega$ and the six arm joint rates) and an unverified mass matrix,
-while the commands that reach the actuators would remain twists and
-joint positions. The cost of this choice is that inertial effects appear
-to the solver only through the velocity limits.
+$y$-axis. The model is kinematic, not dynamic. The control chain used
+here issues only a twist to the drive controller and position setpoints,
+at a fixed rate, to the joint-trajectory controller. No validated
+inertial parameters exist for the loaded platform either. A dynamic
+model would therefore add eight velocity states ($v$, $\omega$ and the
+six arm joint rates) and an unverified mass matrix, while the commands
+that reach the actuators would remain twists and joint positions. The
+cost of this choice is that inertial effects appear to the solver only
+through the velocity limits.
 
 The objective combines an input cost with soft constraints. Over a
 horizon $T$ starting at $t_0$,
@@ -579,13 +581,10 @@ being read from the URDF, which bounds every UR10e joint at
 configured in the arm's own safety panel, so a plan that satisfies the
 URDF can still drive the arm into a safety limit and provoke a
 protective stop that \ocs{} never sees. The task file therefore copies
-the panel limits that were configured during the experiments of
-\cref{ch:hardware}: \ang{-183} to \ang{3} for the base and shoulder
-joints, \ang{\pm 153} for the elbow, \ang{-228} to \ang{48} for
-wrist~1, \ang{\pm 138} for wrist~2 and \ang{\pm 183} for wrist~3. The
-safety configuration of the arm has since been changed and now allows
-\ang{\pm 363} on wrist~3; the other five ranges are unchanged
-(\cref{fig:pendant-limits}).
+the Normal-mode panel limits of the installation used in this work
+(\cref{fig:pendant-limits}): \ang{-183} to \ang{3} for the base and
+shoulder joints, \ang{\pm 153} for the elbow, \ang{-228} to \ang{48}
+for wrist~1, \ang{\pm 138} for wrist~2 and \ang{\pm 183} for wrist~3.
 The velocity bounds are \qty{\pm 0.1}{\meter\per\second} and
 \qty{\pm 0.1}{\radian\per\second} for the base and
 \qty{\pm 0.3}{\radian\per\second} per arm joint, matching the caps that
@@ -595,10 +594,9 @@ the bridge enforces downstream (\cref{sec:hw-interfaces}).
   \centering
   \includegraphics[width=\textwidth]{ur_pendant_joint_limits.jpg}
   \caption{Joint-limit page of the UR10e safety configuration on the
-    teach pendant, photographed after the experiments of
-    \cref{ch:hardware}. The Normal-mode ranges of the first five joints
-    equal the bounds in \texttt{task\_hardware.info}; wrist~3 was
-    widened from \ang{\pm 183} to \ang{\pm 363} after the experiments.}
+    teach pendant, installation \texttt{kalimoro}. The Normal-mode
+    ranges equal the bounds in \texttt{task\_hardware.info}; the
+    Reduced-mode ranges are not used in this work.}
   \label{fig:pendant-limits}
 \end{figure}
 
@@ -621,10 +619,39 @@ links from \texttt{upper\_arm\_link} to \texttt{wrist\_3\_link} carry
 attachments: six marker rings of the motion capture system, which
 protrude at most about \qty{1}{\centi\meter} from the link surface, and
 six tube holders, which protrude about
-\qtyrange{3}{6}{\centi\meter}. Pairing both platform bodies with these links and
+\qtyrange{3}{6}{\centi\meter} (\cref{fig:collision-photos}). Pairing both platform bodies with these links and
 attachments gave the original set of 32 pairs. Pairs whose distance does
 not change with the arm configuration, such as the shoulder link against
 the chassis, were never part of it.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.40\textwidth}
+    \centering
+    \includegraphics[height=5cm]{hero_arm_mount.jpg}
+    \caption{Arm base on the chassis top, next to the operator panel
+      (\texttt{hmi}).}
+    \label{fig:collision-photo-mount}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.27\textwidth}
+    \centering
+    \includegraphics[height=5cm]{hero_tube_holders.jpg}
+    \caption{Tube holders on the upper arm and the forearm.}
+    \label{fig:collision-photo-tubes}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.27\textwidth}
+    \centering
+    \includegraphics[height=5cm]{hero_tool_flange.jpg}
+    \caption{Wrist~3 with the tool flange (\texttt{tool0}) and
+      motion-capture markers.}
+    \label{fig:collision-photo-flange}
+  \end{subfigure}
+  \caption{Platform bodies and arm attachments that enter the
+    self-collision model.}
+  \label{fig:collision-photos}
+\end{figure}
 
 The reduction to twelve pairs, listed in \cref{tab:collision-pairs},
 removes pairs that are redundant rather than pairs that are harmless. An

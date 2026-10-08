@@ -66,11 +66,9 @@ On the dummy this is a consistent kinematic measurement. On hardware the
 same pipeline reconstructs the \ee{} from wheel odometry and joint
 encoders. Drift of the base pose then contaminates every later metric.
 The figures and tables of this chapter, and the internal traces of
-\cref{ch:hardware}, are therefore internal metrology. An ISO-conforming
-accuracy statement would require an external pose of the \ee{}, for
-example from an OptiTrack system, with the uncertainty budget of
-ISO~9283:1998 cl.~6.5~\cite{ISO9283}. That measurement is not part of
-the present experiments.
+\cref{ch:hardware}, are therefore internal metrology: they score
+consistency between the commanded and attained poses that the controller
+itself reconstructs, not pose error relative to the hall.
 
 \subsection{Time-aligned pose error}
 \label{sec:sim-pose-error}
@@ -744,7 +742,6 @@ not used in the dummy checks reported here.
 
 What the dummy cannot close is the list in
 \cref{sec:sim-methodology}: policy lag, actuator dynamics, odometry
-drift, and any ISO claim that needs an external \ee{} pose, $n\ge 3$
-cycles, or a second pipeline. Those belong to the hardware chapter,
-using the metrics of \cref{tab:sim-metrics} on the measured segments of
-the path in \cref{fig:sim-box}.
+drift, $n\ge 3$ cycles, or a second pipeline. Those belong to the
+hardware chapter, using the metrics of \cref{tab:sim-metrics} on the
+measured segments of the path in \cref{fig:sim-box}.

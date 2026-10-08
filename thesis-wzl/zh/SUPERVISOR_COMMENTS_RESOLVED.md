@@ -213,8 +213,14 @@ Buckhorst 2022 实为 *Decentralized Holonic Control System Model for LMAS*, RCI
 ## 未处理 / 待你决定
 
 1. **第 3 章拆分**（p.9 批注“beefy chapter, might consider splitting”）——结构性改动，影响全书章节编号与交叉引用，需要你先定。
-2. 与本次邮件无关但仍未解决的送审前项（见 `REVIEW_2026-08-20.md`）：**缺英文 Abstract**、**缩略语表被注释**、**论文类型 PA 还是 MA 未确认**。
+2. 与本次邮件无关但仍未解决的送审前项（见 `REVIEW_2026-08-20.md`）：**缺英文 Abstract**、**缩略语表被注释**。
+3. **论文类型（2026-10-02 作者确认）：PA（Projektarbeit）**。选题书中的外部计量子任务本文不写、不当缺口讨论；力矩/effort 能力亦不讨论，正文只写实际使用的 twist / 关节轨迹接口。
 
 ## 编译状态
 
-`tectonic` 退出 0，无 TeX error，无 undefined reference / citation，共 **57 页**（原 48 页）。
+`tectonic` 退出 0，无 TeX error，无 undefined reference / citation。
+**2026-10-02 晚：** 约 **67** 页（含当日删 OptiTrack / PolyScope 表述后的编译）。
+
+## 评阅同步
+
+开项与关闭项以 `REVIEW_2026-08-20.md`（2026-10-02 更新）为准：PA 已确认；外部计量与 effort 能力不当缺口。

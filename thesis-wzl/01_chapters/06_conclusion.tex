@@ -187,10 +187,7 @@ mean and percentile variants (\cref{eq:mean-hausdorff}) remove the
 assumption of a common speed profile and are the right preparatory step for a later
 comparison with a pose-to-pose baseline, but with $n=1$ cycle they still
 do not yield ISO path accuracy $\mathrm{AT}_{p}$ or repeatability
-$\mathrm{RT}_{p}$ in the sense of ISO~9283~\cite{ISO9283}. An external
-measurement of \texttt{tool0}---for example from an OptiTrack rig as
-already noted in \cref{sec:sim-metrology}---would be needed before any
-claim about absolute \ee{} pose error enters the thesis.
+$\mathrm{RT}_{p}$ in the sense of ISO~9283~\cite{ISO9283}.
 
 The split between mock and hardware results is instructive in what it
 rules out. Mock hardware preserves policy lag, velocity clamps, and the
@@ -261,17 +258,13 @@ fixed in space, the converse of Experiment~A---would separate base
 tracking from arm-dominated edges without changing the software
 architecture.
 
-\paragraph{Improve pose estimation and external metrology.}
+\paragraph{Improve pose estimation.}
 If odometry drift dominates closed-loop drift, fusing wheel odometry
 with additional proprioceptive or exteroceptive sources through an
 extended Kalman filter (for example the \texttt{robot\_localization}
 package) is a direct next step; the present pipeline uses raw wheel
 odometry only
-(\cref{sec:hero-platform})~\cite{Moore2015RobotLocalization}. For claims
-that must survive examination against ISO~9283, an independent \ee{} pose
-remains mandatory~\cite{ISO9283}. Ground-truth capture would also break
-the confounding between desired and attained frames noted in
-\cref{sec:sim-metrology}.
+(\cref{sec:hero-platform})~\cite{Moore2015RobotLocalization}.
 
 \paragraph{Complete the evaluation programme.}
 Three items would turn the present characterisation into a comparative

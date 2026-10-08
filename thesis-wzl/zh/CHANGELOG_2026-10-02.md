@@ -73,9 +73,21 @@
 | 项 | 状态 |
 |---|---|
 | 第 3 章是否拆分（批注 #27） | 未决 |
-| 英文 Abstract、缩略语表、PA vs MA | 送审前 |
+| 英文 Abstract、缩略语表 | 送审前仍开（PA 已确认） |
+| 论文类型 PA vs MA | **已确认 PA**（2026-10-02） |
+| 选题书外部计量 / OptiTrack | **本文不写**（2026-10-02）；评阅不再当缺口 |
+| PolyScope / effort 能力讨论 | **本文不写**；只保留 twist + 关节轨迹 |
+| 锁实验 SHA `a38bc0d` | 建议仍做（评阅 P0） |
 | `fig:selfcollision` 专用图 | 用 `tab:collision-pairs` 替代，可不再画 |
 | 管线夹 / 安装板特写照片 | 正文已描述，照片非阻塞 |
 | 安装名 `kalimoro`（task 注释）vs 照片 `mft` | 未澄清 |
-| Dummy 一圈补录 → 表 5.1 三列 | Claude 会话提过；是否做由你定 |
-| 全部未提交 | 见 `HANDOFF.md` §4 |
+| Dummy 一圈补录 → 表 5.1 三列 | 可选 |
+| 全部未提交 | 见工程侧 `HANDOFF.md` |
+
+---
+
+## H. 本晚追加（正文 + 评阅）
+
+| 时间 | 修改内容 | 原因 | 出处 |
+|---|---|---|---|
+| ~18:30 Cursor | 正文删 OptiTrack/外部计量缺口与 PolyScope effort；`REVIEW_2026-08-20.md` 按 PA + 作者决定重写开项；同步 RESOLVED / README / 本 CHANGELOG | 用户：「外部计量本文不提；PA；effort 不再讨论」；「修改评阅」 | 本会话 |
