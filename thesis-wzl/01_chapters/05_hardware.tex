@@ -34,9 +34,9 @@ ROS~2~Jazzy with the Zenoh middleware. The external PC was attached to
 the platform subnet by Ethernet for every session below. The wireless
 access point of the platform remains a possible join path, and was the
 reason Zenoh was chosen in the first place, but it was not used as the
-control link here: a cable avoids the jitter that made DDS unusable on
-that hop, at the price of tethering a \qty{400}{\kilo\gram} base to a
-desk. The box of \cref{fig:sim-box} is small enough that the cable did
+control link here: a cable keeps the hop that gave trouble during
+bring-up (\cref{sec:distributed-arch}) out of the loop, at the price of
+tethering a \qty{400}{\kilo\gram} base to a desk. The box of \cref{fig:sim-box} is small enough that the cable did
 not go taut in the recorded laps; it is still a run condition, not a
 property of the controller.
 
@@ -78,7 +78,14 @@ iteration, $\mu_{\mathrm{p}}=16$, $\mu_{\mathrm{o}}=3$, and
 $R_{\mathrm{base}}$ pre-scale $5.5$. The solver on the external PC used
 eight threads. Host and IPC logs were kept alongside the bags
 (\texttt{bag\_host\_0814\_1558} mock,
-\texttt{bag\_host\_0814\_1613} hardware). Metrics are computed from the
+\texttt{bag\_host\_0814\_1613} hardware). The task and waypoint files
+these sessions loaded are not the ones in the working tree: they are
+the snapshot taken from commit \texttt{a38bc0d} and archived with the
+recordings under
+\texttt{paper\_data/experiment\_a/20260814\_005ms\_8pt/config/}. The
+live configuration has since been retuned, so a run started from the
+current repository reproduces neither the operating point listed above
+nor the numbers below. Metrics are computed from the
 exported \texttt{ee\_metrics} and solver-diagnostics streams, restricted
 to $\texttt{segment\_id}\ge 1$ as in \cref{sec:sim-pose-error}.
 
@@ -224,16 +231,84 @@ If that prefix contains the only aggressive correction the solver is
 willing to apply, the robot never receives it. The \ocs{} model is a
 kinematic integrator: a large velocity at $\tau=0$ really would cancel a
 position error in a few tens of milliseconds, and a high
-$\mu_{\mathrm{p}}$ encourages exactly that pulse. The recorded policy
-topic stores the first input of each plan, not the input at the
-interpolation time, so this chapter cannot show the pulse being skipped
-on these laps. What it can show is a consistency check. Along-track lag
-$t_{\mathrm{lag}}$ of \cref{eq:lag-eff} should be comparable to the
-interpolation lag if delay is the whole story. On the mock it is
-(mean $t_{\mathrm{lag}}=\qty{0.39}{\second}$ against
-$\qty{0.29}{\second}$ of interpolation lag). On the robot it is not
-(mean $t_{\mathrm{lag}}=\qty{1.81}{\second}$). Delay explains the mock
-residual and does not explain the hardware residual.
+$\mu_{\mathrm{p}}$ encourages exactly that pulse. For ten policies of
+the hardware lap the full input trajectory was recorded, not only its
+first sample, which makes the prefix directly readable
+(\cref{fig:hw-policy-u}). In all ten the base command does not merely
+decay across the lag: it changes sign. The forward velocity starts at a
+median $\qty{0.078}{\meter\per\second}$, close to the
+$\qty{0.1}{\meter\per\second}$ bound, crosses zero at a median
+$\tau = \qty{0.235}{\second}$, and is a median
+$\qty{-0.015}{\meter\per\second}$ by the $\qty{0.361}{\second}$ at which
+the bridge interpolates. The yaw rate behaves the same way, starting at
+a median $\qty{0.099}{\radian\per\second}$, which is the soft bound
+itself, and reaching $\qty{-0.010}{\radian\per\second}$. The robot is
+therefore not simply missing the correction the solver computed; over
+this sample it receives a base command of the opposite sign.
+
+The mock lap, recorded with the same files and exported the same way,
+acts as the control. Its twelve policies carry a base command that
+starts at a median $\qty{0.008}{\meter\per\second}$, an order of
+magnitude below the bound, and still reads
+$\qty{0.005}{\meter\per\second}$ at its own
+$\qty{0.29}{\second}$ of interpolation lag; two of the twelve change
+sign, both while crossing zero on a signal that never leaves a few
+millimetres per second. The front-loaded, saturating correction is
+absent there. That is the expected consequence of the plant: when the
+state follows the command, the tracking error never grows enough for a
+high $\mu_{\mathrm{p}}$ to demand a large velocity at $\tau=0$. The
+two laps therefore differ not only in how late the policy is read but in
+what the policy contains, and the second difference is a consequence of
+the first acting on a plant that lags.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.92\linewidth, height=5.4cm,
+        xlabel={$\tau$ within the policy / \si{\second}},
+        ylabel={base forward velocity / \si{\meter\per\second}},
+        xmin=0, xmax=1.2, ymin=-0.06, ymax=0.1,
+        scaled y ticks=false,
+        yticklabel style={/pgf/number format/fixed,
+                          /pgf/number format/precision=2},
+        legend pos=north east,
+      ]
+      \pgfplotsinvokeforeach{0,...,9}{
+        \addplot[RWTHBlau100, thin, forget plot, opacity=0.75]
+          table[x=tau, y=v#1] {03_figures/hw_policy_v_tau.dat};
+      }
+      \addplot[black, dashed, forget plot] coordinates {(0.361,-0.06) (0.361,0.1)};
+      \addplot[gray, dotted, forget plot, domain=0:1.2, samples=2] {0};
+      \node[anchor=west, font=\scriptsize] at (axis cs:0.38,0.072)
+        {bridge interpolates here, $\qty{0.361}{\second}$};
+      \node[anchor=east, font=\scriptsize] at (axis cs:1.17,-0.047)
+        {ten policies of the hardware lap};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Base command inside one policy against the lag at which it is
+    read]{%
+    Base forward velocity along the horizon for the ten policies of the
+    hardware lap whose full input trajectory was recorded. Every one of
+    them opens near the \qty{0.1}{\meter\per\second} bound and has
+    already reversed sign by the dashed line, which marks the mean lag
+    at which the bridge interpolates. The reversal is a property of the
+    plan, not of the plant: the solver spends its correction in a prefix
+    that the lag consumes.}
+  \label{fig:hw-policy-u}
+\end{figure}
+
+This sample is narrow. The ten policies span \qty{1.8}{\second} of one
+lap, and \qty{0.361}{\second} is the session mean rather than the lag of
+each individual cycle, so the figure shows a mechanism at work in a
+window and not a statistic over the lap. A second, independent check
+covers the whole lap. Along-track lag $t_{\mathrm{lag}}$ of
+\cref{eq:lag-eff} should be comparable to the interpolation lag if delay
+alone were the story. On the mock it is (mean
+$t_{\mathrm{lag}}=\qty{0.39}{\second}$ against $\qty{0.29}{\second}$ of
+interpolation lag). On the robot it is not (mean
+$t_{\mathrm{lag}}=\qty{1.81}{\second}$), which is what a command of the
+wrong sign, applied for part of every cycle, would produce.
 
 Two other failure modes of the bridge were already designed around and
 barely appeared in these sessions. A mid-run reset handshake still
@@ -339,7 +414,12 @@ line.
 \Cref{tab:hw-metrics} collects the scalar scores. Time-aligned position
 error $e_{\mathrm{p}}$ on the mock had RMS \qty{27}{\milli\meter} and
 maximum \qty{71}{\milli\meter}; on the robot the same quantities were
-\qty{130}{\milli\meter} and \qty{204}{\milli\meter}. Mean Hausdorff
+\qty{130}{\milli\meter} and \qty{204}{\milli\meter}. Against the
+\qty{11}{\milli\meter} that the dummy loop leaves on the same commanded
+path (\cref{tab:sim-residual}), the step to mock hardware---the bridge,
+its clamps, and a loop that now runs against the wall clock---is a
+factor of about two and a half, and the physical plant adds a further
+factor of five. Mean Hausdorff
 $\overline{H}$ rose from \qty{12}{\milli\meter} to
 \qty{62}{\milli\meter}, and the 95th percentile of the nearest-neighbour
 distances from \qty{23}{\milli\meter} to \qty{110}{\milli\meter}. The

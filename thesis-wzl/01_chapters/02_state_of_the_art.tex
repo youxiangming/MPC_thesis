@@ -439,8 +439,13 @@ Sampling-based planning is mature and well supported but computes its
 trajectory before execution and, in its standard form, keeps base and
 arm separate, which disqualifies it as the primary whole-body planner
 while keeping it relevant as the incumbent alternative. Reactive QP-IK
-meets every requirement except the horizon in R2. Whole-body \mpc{} is the only family
-that satisfies R1 to R4 simultaneously; its weak point is R5, the
+covers the coordination, redundancy and reactivity requirements R1, R3
+and R4, and, being a single-step program, it is the lightest of
+the three to evaluate inside a control loop (R5); it stays partial on
+R2, because such a program cannot anticipate a constraint that becomes
+active later in the motion, and on R6. Whole-body \mpc{} is the only
+one of the three that \cref{tab:sota-comparison} scores $+$ on R1 to R4
+together; its weak point is R5, the
 computational burden of solving an optimal-control problem online, which
 is addressed through the MPC--MRT split and a distributed deployment
 (\cref{ch:integration}) and quantified experimentally in

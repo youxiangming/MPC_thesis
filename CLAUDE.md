@@ -42,8 +42,12 @@ One caveat on level 2: check that an instruction actually works against this
 template before applying it. The supervisor suggested `\citep`, which is a
 natbib command and does not compile here.
 
-## The three rules that get checked hardest
+## The four rules that get checked hardest
 
+- **Every number comes from a measurement, a recording, or a config file read at
+  draft time.** Never from memory, a chat note, a vault note, or arithmetic on
+  nominal parameters. See *Numbers* below — this is the rule that has failed
+  most often.
 - **Source every non-obvious statement**, citation at the end of the sentence or
   paragraph it supports.
 - **Never cite a literature review for a fact that originates in a paper it
@@ -52,6 +56,53 @@ natbib command and does not compile here.
   BibTeX entry, and must not be named anywhere in the thesis.
 - **Draw the figure** for any mechanism, taxonomy, architecture, or two-way
   contrast. The supervisor's standing complaint is "a huge wall of text".
+
+## Numbers
+
+Every quantity in the thesis is traceable to one of three things: a value read
+from a config file in `/home/xy/hero-ros2` at draft time, a value counted or
+computed from the archived recordings under
+`src/paper_data/experiment_a/<run>/`, or a cited source. Nothing else is
+admissible — not memory, not a `/home/xy/thinking` note, not a previous draft,
+not a number that "sounds right".
+
+**A derived number is not a measurement.** Dividing a horizon by a configured
+step, multiplying a rate by a duration, or inferring a count from two settings
+produces a hypothesis, not data. If the quantity exists anywhere in a recording,
+count it there instead. Three failures of exactly this kind have already reached
+a compiled PDF:
+
+- self-collision nodes per solve, written as `1.2 s / 2 ms = 600`, then corrected
+  to `1.2 s / 10 ms = 120`, and only right at the third attempt when counted from
+  `policy.csv` (`n_knots`): the rollout integrates adaptively, so the real figure
+  is a **median of ten**, with only the first interval equal to the configured
+  `10 ms`;
+- the horizon of `task_hardware.info`, written as `1.3 s` when the file says
+  `1.2 s`;
+- arm joint limits, written as "read from the URDF" when the task file overrides
+  them with the UR safety-panel values.
+
+**Say which kind of number it is.** A configured or requested value and an
+achieved one are different claims and must read differently: `mpcDesiredFrequency`
+is `10 Hz`, but the hardware solve rate is `min(f_MRT, 1/t_solve)` and measured
+`4.4 Hz`; the configured MRT rate is `100 Hz`, but the recorded dummy session
+produced ten observations per second of OCS2 time. Never present a configured
+value as an outcome.
+
+**Check the export before trusting it.** A CSV column may be capped or
+subsampled (`policy_knots.csv` stores only the first ten knots of each policy),
+and a published message may or may not carry the solver's own grid — in this
+project it does, because `MPC_ROS_Interface.cpp` copies every element and
+`GaussNewtonDDP::getPrimalSolution` only truncates a prefix. Verify that in the
+source before quoting a count derived from a topic.
+
+**Experiment numbers come from the frozen snapshot**, not the working tree:
+`src/paper_data/experiment_a/20260814_005ms_8pt/` with its `config/` taken from
+commit `a38bc0d`. The live task file has been retuned since and contradicts the
+thesis.
+
+If a number cannot be obtained this way, write `\todo{verify: ...}` rather than
+an estimate, and say so in the reply.
 
 ## Build
 

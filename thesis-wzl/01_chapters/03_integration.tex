@@ -191,22 +191,23 @@ subject of the next section.
 \label{sec:distributed-arch}
 
 Solving the optimal-control problem is the most expensive part of the
-loop relative to the remaining nodes on the IPC, and the IPC has a
-quarter of the hardware threads of the external PC. The IPC carries an
-Intel Core i5-6300U with two cores and four threads and
-\qty{7.7}{\giga\byte} of memory, runs a kernel without real-time
-patches, and keeps the CPU frequency governor at \texttt{powersave}. The
-external PC carries an AMD Ryzen~7 7840HS with eight cores and sixteen
-threads. The solver alone is configured for eight threads
-(\cref{tab:mpc-config}), twice what the IPC offers before the control
-chain takes its share, so the solver is placed on the external PC. The
-MPC--MRT split
-of \ocs{}
-(\cref{sec:sota-ocs2}) offers a way out: the optimiser and the client
-that evaluates its policy are separate processes that exchange messages,
-so they may live on different machines~\cite{ocs2Toolbox}.
+loop relative to the remaining nodes on the IPC, and the IPC is the
+smaller of the two machines available. It carries an Intel Core
+i5-6300U with two cores and four threads and \qty{7.7}{\giga\byte} of
+memory, runs a kernel without real-time patches, and keeps the CPU
+frequency governor at \texttt{powersave}; the external PC carries an
+AMD Ryzen~7 7840HS with eight cores and sixteen threads. The solver
+alone is configured for eight threads (\cref{tab:mpc-config}), twice
+what the IPC offers before the control chain takes its share, so
+running it on board would have forced a shorter horizon or a coarser
+model.
 
-The deployment used here places them on either side of the machine
+The MPC--MRT split of \ocs{} (\cref{sec:sota-ocs2}) removes that
+constraint: the optimiser and the client that evaluates its policy are
+separate processes that exchange messages, so they may live on
+different machines~\cite{ocs2Toolbox}.
+
+The deployment used here puts them on either side of the machine
 boundary. The external PC runs the \mpc{} node, the target-generating
 node and the visualisation, while the IPC runs the low-level control
 chain and the MRT bridge. The fast path---measure, evaluate the policy,
@@ -572,7 +573,8 @@ shows the penalty at the configured relaxation width.
     $\qty{0.11}{\meter} + \delta$.}
   \label{fig:barrier}
 \end{figure}
- Three groups of
+
+Three groups of
 constraints use this penalty: arm joint position limits, velocity limits
 on all eight inputs, and a minimum distance between selected pairs of
 links. The position limits are overridden in the task file instead of
@@ -603,11 +605,23 @@ the bridge enforces downstream (\cref{sec:hw-interfaces}).
 Self-collision is singled out here because its evaluation cost scales
 with the number of geometry pairs, and it was therefore the first term
 addressed when solve time had to be reduced. Every pair costs a distance
-query and its derivative with respect to the state at each time node of
-every solve, and the \qty{1.2}{\second} horizon at the
-\qty{2}{\milli\second} step of \cref{tab:mpc-config} has about 600 such
-nodes~\cite{Carpentier2019Pinocchio,ocs2Toolbox}. The constraint value
-of a pair is its distance minus the minimum distance~\cite{ocs2Toolbox}.
+query and its derivative with respect to the state at each node of the
+time grid on which the solver linearises the
+problem~\cite{Carpentier2019Pinocchio}. That grid comes from the
+rollout and not from the \qty{2}{\milli\second} step at which the
+backward pass integrates the Riccati equation; since the rollout
+integrates adaptively, the number of nodes follows the solution rather
+than the horizon~\cite{ocs2Toolbox}. It can be counted from the
+recordings, because a published policy carries the solver's own grid
+without resampling: over the 713 policies of the hardware lap of
+\cref{ch:hardware}, one solve spans a median of ten nodes across the
+\qty{1.24}{\second} it publishes, with a quartile range of nine to ten,
+and the first interval equals the requested
+\qty{10}{\milli\second} rollout step of \cref{tab:mpc-config} in every
+one of them. Cutting the pair set from 32 to 12 therefore removes about
+two hundred distance queries, and as many derivative evaluations, from
+each solve. The constraint value of a pair is its distance minus the
+minimum distance~\cite{ocs2Toolbox}.
 
 Two platform bodies are within reach of the arm. The chassis top is the
 mounting plane of the arm, and the shoulder axis lies only about
@@ -684,7 +698,7 @@ set does not see.
     \midrule
     \texttt{upper\_arm}, \texttt{forearm}, \texttt{wrist\_1}--\texttt{3}
       & link itself & kept (5) & kept (5) \\
-    marker rings \texttt{ring2}--\texttt{ring6}
+    marker rings \texttt{ring2}, \texttt{ring2b}, \texttt{ring3}--\texttt{ring6}
       & $\le \qty{1}{\centi\meter}$ & dropped (6) & dropped (4) \\
     tube holders \texttt{bottom\_1}--\texttt{4}
       & \qtyrange{3}{6}{\centi\meter} & dropped (4) & dropped (4) \\

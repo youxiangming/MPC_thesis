@@ -108,7 +108,7 @@ The user drafts from Chinese notes. These patterns translate cleanly and read as
 2. Count {furthermore, moreover, additionally} — ≤ 1 per page.
 3. Scan for triads — each surviving list of three is genuinely three things.
 4. Read only the first and last sentence of each paragraph — no restatement pairs.
-5. Every number traceable to a config file, measurement, or citation at draft time; none copied from this skill; otherwise TODO-flagged.
+5. Every number traceable to a config file, measurement, or citation at draft time; none copied from this skill; none obtained by arithmetic on two configured settings when a recording could be counted instead; configured values never written as achieved ones; otherwise TODO-flagged. Full rule: `CLAUDE.md` §Numbers.
 6. Read one paragraph aloud (mentally): if the rhythm is metronomic, break one sentence.
 7. Every non-obvious statement has a source, at the end of its sentence or paragraph — and no fact is sourced to a literature review that only summarises it.
 8. Every comparative claim names its baseline; every suitability claim points at a requirement ID.

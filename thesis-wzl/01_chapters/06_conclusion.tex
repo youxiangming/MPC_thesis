@@ -35,28 +35,44 @@ commands under explicit guards (\cref{sec:hw-interfaces}). Third, a
 simulation-based acceptance path was built around Experiment~A: the same
 task file and waypoint list that the robot will load are exercised in a
 dummy MRT loop, with internal metrology and ISO-oriented path metrics
-defined before any hardware session (\cref{ch:simulation}). Fourth, that
+defined before any hardware session, and the lap that loop leaves
+tracks the commanded box at \qty{11}{\milli\meter} RMS
+(\cref{tab:sim-residual}). Fourth, that
 configuration was taken through mock \texttt{ros2\_control} hardware and
 onto the physical platform. The closed eight-corner path of
 \cref{fig:sim-box} completed on both plants; the approaching gate,
 segment tagging, and lead-out hold that \cref{sec:sim-node} specifies all
 appeared in the recorded sessions.
 
-The tracking outcome is more qualified. On mock hardware, which shares
-the bridge and the policy lag with the robot but replaces the plant by
-command echoing, the attained \ee{} path followed the commanded rectangle
-at a few centimetres (\cref{tab:hw-metrics}). On the physical robot, with
-the same files and the same wall-clock lap duration, position error
-remained at one to two decimetres on the long edges and did not collapse
-during corner dwells (\cref{fig:hw-error,tab:hw-segments}). The loop
-therefore ran in real time in the sense of \cref{eq:rt-invariant}---no
-policy-exhaustion hold occurred on the hardware lap---but the effective
-\mpc{} rate was about \qty{4.4}{\hz}, set by the solve time, and
-the first one to two tenths of a second of each plan were lost to solve
-time and network delay before the bridge could apply them
-(\cref{fig:hw-lag}). Along-track lag consistent with that delay explains
-the mock residual; it does not explain the larger hardware offset
-(\cref{sec:hw-challenges}).
+The result these contributions produce is a gap, and the gap is the
+outcome this work reports. The same Experiment~A files were executed on
+three plants that differ only in what lies below the policy. The dummy
+loop, where nothing but the optimiser acts, tracks the commanded box at
+\qty{11}{\milli\meter} RMS (\cref{tab:sim-residual}). Mock hardware,
+which adds the bridge, its clamps and a loop bound to the wall clock,
+tracks at \qty{27}{\milli\meter}. The physical platform, with the same
+files and the same lap duration, tracks at \qty{130}{\milli\meter} and
+does not recover during the corner dwells
+(\cref{fig:hw-error,tab:hw-metrics,tab:hw-segments}). Geometry, the
+\ocs{} time axis and the cost tuning are common to all three and are
+therefore not what separates them.
+
+What separates them is where the controller's correction sits inside the
+plan. The loop ran in real time in the sense of \cref{eq:rt-invariant},
+with no policy-exhaustion hold on the hardware lap, but at an effective
+\qty{4.4}{\hz} set by the solve time, so the bridge reads each policy a
+mean \qty{0.361}{\second} after the state it was computed for
+(\cref{fig:hw-lag}). For the ten policies of that lap whose full input
+trajectory was recorded, the base command does not merely decay over
+that interval: it opens near the \qty{0.1}{\meter\per\second} bound,
+crosses zero at a median $\tau = \qty{0.235}{\second}$, and has reversed
+sign by the time the bridge samples it (\cref{fig:hw-policy-u}). Over
+that sample the robot receives a base command opposite to the one the
+solver computed. The mock lap, read the same way, carries no such pulse
+at all: its base command starts an order of magnitude below the bound
+and barely changes across its own lag. The difference between the two
+plants is therefore not only that one reads its policy later, but that
+only one of them provokes the plan that is unsafe to read late.
 
 Several constraints bound how strongly these results can be read. All
 desired and attained poses were reconstructed from wheel odometry and
@@ -122,7 +138,7 @@ and the evidence reported above for it.
       -4.5/R4/{Online re-planning from the measured state}/%
         {a re-solve from the bridge observation in every cycle
          (\cref{fig:bridge-cycle})}/%
-        {\qty{4.4}{\hz} effective against the \qty{10}{\hz} request
+        {\qty{4.4}{\hz} effective, set by the solve time
          (\cref{sec:hw-challenges})}/{$\circ$},
       -6.0/R5/{Real-time feasibility on the on-board computer}/%
         {the solver runs on the external PC, the MRT bridge on the IPC
@@ -154,7 +170,8 @@ and the evidence reported above for it.
     the integrated system, and the evidence this thesis offers for it. The
     symbols are those of \cref{tab:sota-comparison}: $+$ met, $\circ$ met
     in part. R2 and R3 are implemented and in use, but no measurement
-    scores them on their own. R4 is met at a lower rate than requested. R5
+    scores them on their own. R4 is met at the rate the solve time allows,
+    not at a rate the task file sets. R5
     is the requirement whose wording the deployment does not meet: the loop
     satisfies \cref{eq:rt-invariant}, yet it does so because the solver was
     moved off the on-board computer, so the requirement holds for the robot
@@ -166,6 +183,7 @@ and the evidence reported above for it.
 \section{Critical Reflection}
 \label{sec:concl-reflection}
 
+\begin{sloppypar}
 The experiments answer a narrower question than the LMAS motivation of
 \cref{sec:lmas} might suggest. They show that a time-parameterised
 \ee{} reference, published as \ocs{} \texttt{TargetTrajectories} rather
@@ -177,6 +195,7 @@ already rejects. They do not, by themselves, establish that this
 pipeline meets production accuracy requirements, nor that whole-body
 \mpc{} outperforms a well-tuned decoupled stack on task completion time
 or corner accuracy.
+\end{sloppypar}
 
 The metric layer deserves the same caution. Time-aligned pose error
 $e_{\mathrm{p}}$ and the along-track lag $t_{\mathrm{lag}}$ of
@@ -192,17 +211,21 @@ $\mathrm{RT}_{p}$ in the sense of ISO~9283~\cite{ISO9283}.
 The split between mock and hardware results is instructive in what it
 rules out. Mock hardware preserves policy lag, velocity clamps, and the
 Zenoh hop; when it tracks well, the reference geometry, the \ocs{} time
-axis, and the cost tuning are not the dominant fault. Hardware error that
-grows on horizontal edges where the base must contribute, persists when
-the command stops at a dwell, and exceeds a pure lag prediction of
-$0.36\,\mathrm{s}\times v_{\mathrm{ref}}$ (\cref{sec:hw-results}),
-points instead to unmodelled base dynamics and to re-solves that start
-from a state the previous plan did not anticipate. That reading is
-consistent with the kinematic integrator in the model and with the
-\qty{400}{\kilo\gram} platform's own motion limits, but it remains a
-diagnosis from internal signals; isolating wheel slip, odometry drift,
-and arm tracking error would need additional sensing or deliberately
-simpler motions.
+axis, and the cost tuning are not the dominant fault. What remains has two
+parts, and they carry different weight. The sign reversal of
+\cref{fig:hw-policy-u} is measured, and it explains why an error that
+exceeds the pure lag prediction $0.36\,\mathrm{s}\times
+v_{\mathrm{ref}}$ can persist through a dwell: a command of the wrong
+sign does not stop being wrong when the reference stops moving. Why the
+solver places its correction there is the second part, and it is still
+inferred rather than shown. The kinematic integrator of
+\cref{sec:wholebody-model} lets an arbitrarily large velocity at
+$\tau=0$ cancel a position error within one time step, and nothing in
+the model charges the \qty{400}{\kilo\gram} platform for the
+acceleration that would require, so a plan that front-loads the
+correction is optimal on the model and infeasible on the robot.
+Separating that from wheel slip, odometry drift and arm tracking error
+would need additional sensing or deliberately simpler motions.
 
 Scope limits are finally worth stating plainly. One mobile manipulator,
 one closed path, and one lap per plant are enough to debug integration
@@ -259,12 +282,14 @@ tracking from arm-dominated edges without changing the software
 architecture.
 
 \paragraph{Improve pose estimation.}
+\begin{sloppypar}
 If odometry drift dominates closed-loop drift, fusing wheel odometry
 with additional proprioceptive or exteroceptive sources through an
 extended Kalman filter (for example the \texttt{robot\_localization}
 package) is a direct next step; the present pipeline uses raw wheel
 odometry only
 (\cref{sec:hero-platform})~\cite{Moore2015RobotLocalization}.
+\end{sloppypar}
 
 \paragraph{Complete the evaluation programme.}
 Three items would turn the present characterisation into a comparative
@@ -276,8 +301,18 @@ Table~3 speed levels and $n\ge 3$ cycles on the whole-body pipeline would
 populate $\mathrm{AT}_{p}$ and $\mathrm{RT}_{p}$~\cite{ISO9283}.
 Re-running the mock versus hardware comparison over a wireless Zenoh link
 would test whether the Ethernet sessions of \cref{sec:hw-deployment} bias
-the timing budget optimistically~\cite{zenoh}. Until those pieces exist,
-the defensible statement is the one \cref{sec:hw-results} already makes:
-the Experiment~A files execute on hardware; mock hardware tracks at
-centimetre scale with lag consistent with policy delay; the physical
-platform does not, and the gap is not explained by solver failure alone.
+the timing budget optimistically~\cite{zenoh}. Of these, one experiment is prior to the
+rest. The sign reversal of \cref{fig:hw-policy-u} predicts that the
+hardware residual is driven by \emph{when} the policy is read rather
+than by what the plant does with it, and that prediction is falsifiable
+with the apparatus already in place: re-run the same files with the lag
+compensated, by a feedback policy, by evaluating the plan at the time it
+will actually be applied, or simply by a solve short enough that
+$\tau=0$ is still in the future, and measure whether the
+\qty{130}{\milli\meter} moves towards the \qty{27}{\milli\meter} of
+the mock plant. If it does, the gap is a timing problem and the model
+can stay kinematic. If it does not, the correction sits in the model,
+and an acceleration-limited base is the next thing to build. Everything
+else in this section is worth doing; this is the measurement that
+decides which of the two readings of \cref{sec:concl-reflection} is
+right.

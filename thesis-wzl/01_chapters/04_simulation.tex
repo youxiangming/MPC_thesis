@@ -12,8 +12,9 @@ cost function can be seen before it is blamed on the plant. That loop is
 the dummy MRT of \ocs{}~\cite{ocs2Toolbox}. \Cref{sec:sim-methodology}
 states what it can show and defines the metrics used here and in
 \cref{ch:hardware}. \Cref{sec:sim-dummy} describes the closed \ee{} path
-that the dummy exercises and the checks that a session must pass before
-the same files are taken to the robot.
+that the dummy exercises, the checks that a session must pass before the
+same files are taken to the robot, and the residual measured on one
+accepted lap.
 
 % ---------------------------------------------------------------------
 \section{Validation Methodology and Evaluation Metrics}
@@ -23,12 +24,16 @@ The dummy MRT is not a second controller. It is the production \mpc{}
 node and the production target publisher, closed through
 \texttt{MRT\_ROS\_Dummy\_Loop} instead of the hardware bridge
 (\cref{sec:hw-interfaces}). The dummy integrates the latest policy with
-the same kinematic rollout the solver uses, at the configured MRT rate of
-\qty{100}{\hz}, and feeds the resulting state back as the next
-observation~\cite{ocs2Toolbox}. There is no policy-evaluation lag, no
-actuator dynamics, and no wheel-odometry drift. The \ee{} error that
-remains is the optimiser's residual against its own model: input costs
-and velocity limits prevent a perfect match to the interpolated
+the same kinematic rollout the solver uses and feeds the resulting state
+back as the next observation~\cite{ocs2Toolbox}. The task file
+configures it for \qty{100}{\hz}, a rate the recorded session does not
+reach (\cref{sec:sim-result}), which costs nothing here because the loop
+has no plant to keep up with. There are no actuator dynamics and no
+wheel-odometry drift, and the loop is not bound to a wall clock: it
+advances its own time axis one step per iteration, so a policy is never
+older, on that axis, than the solve that produced it. The \ee{} error
+that remains is the optimiser's residual against its own model: input
+costs and velocity limits prevent a perfect match to the interpolated
 reference, and a finite horizon cannot see the whole
 path~\cite{Rawlings2017MPC,Mayne2000Constrained}.
 
@@ -59,8 +64,11 @@ reference. The attained pose is Pinocchio forward kinematics of that
 observation, with \texttt{tool0} as the \ee{} frame
 (\cref{sec:hero-platform})~\cite{Carpentier2019Pinocchio}. The error
 signal therefore carries no cross-topic time-alignment residual. The
-node publishes it at \qty{20}{\hz} on
-\texttt{/ee\_waypoint\_target/ee\_metrics}.
+node publishes it on \texttt{/ee\_waypoint\_target/ee\_metrics}, at
+\qty{20}{\hz} in the hardware sessions of \cref{ch:hardware} and at ten
+samples per second of \ocs{} time in the dummy session of
+\cref{sec:sim-result}, where the loop produces observations more
+slowly.
 
 On the dummy this is a consistent kinematic measurement. On hardware the
 same pipeline reconstructs the \ee{} from wheel odometry and joint
@@ -740,8 +748,99 @@ physical runs in \cref{ch:hardware}. A planar four-corner variant
 exists as a reduced path at constant $z$ and shares this node; it is
 not used in the dummy checks reported here.
 
-What the dummy cannot close is the list in
-\cref{sec:sim-methodology}: policy lag, actuator dynamics, odometry
-drift, $n\ge 3$ cycles, or a second pipeline. Those belong to the
-hardware chapter, using the metrics of \cref{tab:sim-metrics} on the
-measured segments of the path in \cref{fig:sim-box}.
+% ---------------------------------------------------------------------
+\subsection{Residual on the accepted lap}
+\label{sec:sim-result}
+
+A session that passes those checks also leaves a trace, and that trace
+is the optimiser's residual on its own model. The lap reported here
+loaded the archived Experiment~A task and waypoint files, the same pair
+the two hardware laps of \cref{ch:hardware} used, so the three plants
+are scored on identical inputs. It completed all eight measured edges and
+held the lead-out, so it is an accepted session in the sense above.
+\Cref{tab:sim-residual} lists its scores and \cref{fig:sim-dummy-error}
+shows the error over the measured path.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Residual of the dummy loop on the accepted Experiment~A
+    lap]{%
+    Residual of the dummy loop on the accepted Experiment~A lap
+    ($\texttt{segment\_id}\ge 1$), computed with the metrics of
+    \cref{tab:sim-metrics}. Hausdorff quantities use the
+    \qty{1}{\milli\meter} resampling of the commanded polyline defined in
+    \cref{sec:sim-path-metrics}. The same quantities for the two
+    hardware plants are in \cref{tab:hw-metrics}.}
+  \label{tab:sim-residual}
+  \begin{tabularx}{\linewidth}{@{}Xl@{}}
+    \toprule
+    Quantity & Dummy loop \\
+    \midrule
+    $e_{\mathrm{p}}$ RMS (max)
+      & \qty{11}{\milli\meter} (\qty{43}{\milli\meter}) \\
+    $e_{\mathrm{o}}$ RMS (max)
+      & \qty{0.033}{\radian} (\qty{0.10}{\radian}) \\
+    $H$ / $\overline{H}$ / $P_{95}$
+      & \qty{17}{\milli\meter} / \qty{5}{\milli\meter} /
+        \qty{13}{\milli\meter} \\
+    mean $t_{\mathrm{lag}}$
+      & \qty{0.10}{\second} \\
+    mean solve time (median, max)
+      & \qty{150}{\milli\second} (\qty{152}{\milli\second},
+        \qty{276}{\milli\second}) \\
+    measured lap on the \ocs{} axis
+      & \qty{103.9}{\second} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.92\linewidth, height=5.2cm,
+        xlabel={time on measured path / \si{\second}},
+        ylabel={$e_{\mathrm{p}}$ / \si{\milli\meter}},
+        xmin=0, xmax=105, ymin=0, ymax=50,
+        legend pos=north east,
+      ]
+      \addplot[RWTHBlau100, thick] table {03_figures/sim_dummy_ep.dat};
+      \legend{dummy loop}
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Residual of the dummy loop over the measured path]{%
+    Time-aligned \ee{} position error of the dummy loop over the eight
+    measured edges, with time zero at the first sample carrying
+    $\texttt{segment\_id}\ge 1$. The error stays in the millimetre range
+    throughout. It is largest on the four edges of the lower face
+    (\qtyrange{0}{53}{\second}) and smallest on the upper face
+    (\qtyrange{53}{104}{\second}).}
+  \label{fig:sim-dummy-error}
+\end{figure}
+
+Two readings follow. The first is a lower bound: an \ee{} error of
+about one centimetre is what the configured cost and the velocity limits
+leave on a model the solver itself integrates, so no part of the error
+measured on hardware below that level can be attributed to the plant.
+Per edge the RMS stays between \qty{3}{\milli\meter} and
+\qty{17}{\milli\meter}. It is consistently larger on the lower face,
+edges~1 to~4 at \qtyrange{8}{17}{\milli\meter}, than on the upper face,
+edges~5 to~8 at \qtyrange{3}{8}{\milli\meter}, and the single
+\qty{43}{\milli\meter} peak sits at the end of the long $-y$ edge; the
+lap reported here does not separate the geometry from the tuning well
+enough to say which of the two causes that split. The
+second concerns the along-track lag. At
+$t_{\mathrm{lag}}=\qty{0.10}{\second}$ the dummy is barely behind its
+reference, but this number does not transfer: the loop advanced
+\qty{103.9}{\second} of \ocs{} time in about \qty{244}{\second} of wall
+time and produced ten observations per second of \ocs{} time against
+the hundred the hardware loop produces, so the solver had more wall time
+per simulated second than any deployed loop would grant it. The dummy
+therefore bounds the optimiser's residual; it does not predict the lag
+that \cref{sec:hw-challenges} measures.
+
+What the dummy still cannot close is the rest of the list in
+\cref{sec:sim-methodology}: actuator dynamics, odometry drift,
+$n\ge 3$ cycles, or a second pipeline. Those belong to the hardware
+chapter, using the metrics of \cref{tab:sim-metrics} on the measured
+segments of the path in \cref{fig:sim-box}.
