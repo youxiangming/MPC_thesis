@@ -198,12 +198,12 @@ $t_{\mathrm{lag}}$ or the path metrics below.
 Time-aligned error assumes that the commanded and attained poses share a
 clock and a speed profile. That is true for the \ocs{} loop, where the
 reference is a time-parameterised \texttt{TargetTrajectories} message.
-It is not true of a decoupled Nav2 plus MoveIt baseline, which would
-reach the same corners with a different velocity profile and with
-pauses while the base
-repositions~\cite{Macenski2020Nav2,moveit2}. A later comparison of the two
-pipelines therefore needs a metric that treats the command as a
-geometric path, not as a trajectory. The (symmetric) Hausdorff distance
+The assumption has a cost: an \ee{} that follows the commanded edge
+exactly but late is charged the full along-track distance
+$e_{\parallel}$, so $e_{\mathrm{p}}$ alone cannot say whether the
+attained path has the commanded shape. A second metric therefore treats
+the command as a geometric path, not as a trajectory. The (symmetric)
+Hausdorff distance
 between the commanded point set $A$ and the attained point set $B$
 is~\cite{Huttenlocher1993Hausdorff}
 \begin{equation}
@@ -305,10 +305,8 @@ $\mathrm{AT}_{p}$ reduces to the maximum deviation of a single attained
 path from the command, which is close in spirit to $h(B,A)$ but still
 parameterised by the command, not by an unordered cloud. Pose accuracy
 $\mathrm{AP}_{p}$ (cl.~7.2.1) is the distance from each commanded corner
-to the barycentre of the attained poses at that corner; it is the
-fair common metric once a decoupled baseline exists, because that
-baseline has no continuous rectangular path to score with
-$\mathrm{AT}_{p}$~\cite{ISO9283}. Cycle counts and the three mandatory
+to the barycentre of the attained poses at that
+corner~\cite{ISO9283}. Cycle counts and the three mandatory
 speed levels of ISO Table~3 are not exercised in this
 chapter~\cite{ISO9283}. One slow lap on the dummy is a pipeline check,
 not an ISO test.
@@ -346,10 +344,10 @@ offline from the same bag export that \cref{ch:hardware} uses.
       & time-free; both directions required \\
     $\mathrm{AT}_{p}$
       & ISO path accuracy of the whole-body loop
-      & cl.~8.2; whole-body pipeline only \\
+      & cl.~8.2; here one cycle, $n=1$ \\
     $\mathrm{AP}_{p}$
       & Did the \ee{} reach the corners?
-      & cl.~7.2.1; common with a pose-to-pose baseline \\
+      & cl.~7.2.1; defined here, not reported \\
     $T$
       & How long did the measured lap take?
       & wall clock; Hausdorff does not capture this \\
@@ -742,6 +740,53 @@ metric topic must show \texttt{segment\_id} passing through $1$--$8$
 and returning to a negative identifier. Those checks accept the
 geometry, the \ocs{} time axis, the data pipeline and the visualisation.
 They do not produce a tracking-accuracy number for the robot.
+\Cref{fig:sim-rviz} shows the view in which those checks are made,
+before the start call, during the lap and after it.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sim_dummy_rviz_ready.png}
+    \caption{Before the start call}
+    \label{fig:sim-rviz-ready}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sim_dummy_rviz_run.png}
+    \caption{During the lap}
+    \label{fig:sim-rviz-run}
+  \end{subfigure}
+
+  \vspace{2mm}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sim_dummy_rviz_closeup.png}
+    \caption{During the lap, close-up of the trace}
+    \label{fig:sim-rviz-closeup}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sim_dummy_rviz_done.png}
+    \caption{After the completed lap}
+    \label{fig:sim-rviz-done}
+  \end{subfigure}
+  \caption[RViz view of the dummy loop]{%
+    RViz view of the dummy loop. Blue lines and spheres are the commanded
+    path and its corners, which the waypoint node labels W1 to W8 in the
+    order P1 to P8 of \cref{tab:sim-waypoints}. The orange legs are the
+    lead-in and the lead-out. The red line is the attained \ee{} trace,
+    and the axis triads mark the commanded and the attained \ee{} pose.
+    In (a) the box is landed and the node waits for the start call; in
+    (b) and (c) the trace follows the commanded edges; in (d) the trace
+    has closed the loop and the \ee{} rests on the lead-out. The
+    screenshots come from a separate dummy session on
+    13~October~2026, not from the lap of \cref{sec:sim-result}. They
+    illustrate the view and carry no score.}
+  \label{fig:sim-rviz}
+\end{figure}
 
 The same YAML and task file are the input of the mock-hardware and
 physical runs in \cref{ch:hardware}. A planar four-corner variant

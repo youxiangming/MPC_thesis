@@ -19,8 +19,7 @@ timing and model problems that show up once the bridge is in the loop.
 eight-corner path of \cref{fig:sim-box}, using the metrics of
 \cref{tab:sim-metrics}. Both traces are internal metrology
 (\cref{sec:sim-metrology}). A single slow lap is not an ISO~9283
-test~\cite{ISO9283}, and it is not yet a comparison with a decoupled
-baseline.
+test~\cite{ISO9283}.
 
 % ---------------------------------------------------------------------
 \section{Deployment on the \hero{} Platform}
@@ -202,18 +201,19 @@ could be read from the log rather than inferred from solve time alone.
       \draw (\x, 0.12) -- (\x, -0.12);
       \node[below, lbl] at (\x, -0.12) {$\t\,\mathrm{s}$};
     }
-    \draw[very thick, RWTHBlau100] (0, 0.85) -- (11.0, 0.85);
-    \node[lbl, anchor=west] at (0, 1.25)
+    \draw[very thick, RWTHBlau100] (0, 1.3) -- (11.0, 1.3);
+    \node[lbl, above] at (7.6, 1.35)
       {policy valid on $[t_0,\,t_0+T]$, $T=\qty{1.3}{\second}$};
-    \fill[RWTHOrange100] (0, 0.85) circle (2.2pt);
-    \node[lbl, above] at (0, 0.95) {$t_0$ snapshot};
-    \draw[RWTHOrange100, thick] (0, 0.55) -- (2.2, 0.55);
-    \node[lbl, above] at (1.1, 0.55) {solve $+\mathrm{net}$};
-    \fill[RWTHBlau100] (2.2, 0.85) circle (2.2pt);
-    \node[lbl, above] at (2.2, 0.95) {arrival};
-    \draw[thick, dashed, RWTHOrange100] (2.2, 0.85) -- (3.3, 0.85);
-    \fill[black] (3.3, 0.85) circle (2.2pt);
-    \node[lbl, above] at (3.6, 1.15) {typical evaluation};
+    \fill[RWTHOrange100] (0, 1.3) circle (2.2pt);
+    \node[lbl, above] at (0, 1.4) {$t_0$ snapshot};
+    \draw[RWTHOrange100, thick] (0, 0.6) -- (2.2, 0.6);
+    \node[lbl, above] at (1.1, 0.6) {solve $+\mathrm{net}$};
+    \fill[RWTHBlau100] (2.2, 1.3) circle (2.2pt);
+    \node[lbl, above] at (2.2, 1.4) {arrival};
+    \draw[thick, dashed, RWTHOrange100] (2.2, 1.3) -- (3.3, 1.3);
+    \fill[black] (3.3, 1.3) circle (2.2pt);
+    \draw[thin] (3.3, 1.4) -- (3.3, 1.95);
+    \node[lbl, above] at (3.3, 1.95) {typical evaluation};
     \draw[<->] (0, -0.85) -- (2.2, -0.85);
     \node[lbl, below] at (1.1, -0.85)
       {unused prefix $\approx\qty{0.24}{\second}$};
@@ -604,10 +604,9 @@ drift of the attained path relative to its own start was
 \qty{15}{\centi\meter} on the robot and \qty{11}{\centi\meter} on the
 mock, most of it in $z$ at the last vertical edge rather than a planar
 loop-closure error. None of this is an absolute accuracy statement in
-the hall. Second, each plant was run once, at one speed, without a
-decoupled baseline. Repeatability $\mathrm{RT}_{p}$, the three speed
-levels of ISO Table~3, and a Nav2 plus MoveIt comparison are outside the
-present data~\cite{ISO9283,Macenski2020Nav2,moveit2}.
+the hall. Second, each plant was run once, at one speed. Repeatability
+$\mathrm{RT}_{p}$ and the three speed levels of ISO Table~3 are outside
+the present data~\cite{ISO9283}.
 
 What the pair of laps does show is narrower. The Experiment~A files that
 the dummy accepted can be executed by the hardware stack from approaching

@@ -42,7 +42,99 @@ assembly ``line'' thus becomes a reconfigurable constellation of
 resources matched to the current order, and control of that
 constellation is decentralised so that the system can absorb product
 changes, demand fluctuations, and disturbances without a physical
-relayout~\cite{Buckhorst2022LMAS}.
+relayout~\cite{Buckhorst2022LMAS}. \Cref{fig:line-vs-lmas} contrasts
+this arrangement with a station-bound line.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      lbl/.style={font=\scriptsize, align=center},
+      station/.style={draw, rounded corners=1pt, minimum width=11mm,
+                      minimum height=14mm},
+      prod/.style={draw=RWTHBlau100, fill=RWTHBlau100,
+                   minimum size=2.6mm, inner sep=0pt},
+      nextprod/.style={draw=RWTHBlau100, dashed, minimum size=2.6mm,
+                       inner sep=0pt},
+      res/.style={circle, draw=RWTHOrange100, fill=RWTHOrange100,
+                  minimum size=2.4mm, inner sep=0pt},
+      wrk/.style={circle, draw, fill=white, minimum size=2.4mm,
+                  inner sep=0pt},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      move/.style={-{Latex[length=1.6mm]}, dashed, gray},
+      grp/.style={circle, draw=gray, dashed, minimum size=13mm,
+                  inner sep=0pt},
+    ]
+    % =================================================================
+    % (a) station-bound line
+    % =================================================================
+    \foreach \i/\x in {1/0.6, 2/2.0, 3/3.4, 4/4.8} {
+      \node[station] (s\i) at (\x, 1.6) {};
+      \node[lbl, above=0.3mm] at (s\i.north) {S\i};
+      \node[res] at (\x-0.25, 2.0) {};
+      \node[wrk] at (\x+0.25, 2.0) {};
+    }
+    \draw[flow] (-0.3, 1.25) -- (5.7, 1.25);
+    \node[prod] at (0.6, 1.25) {};
+    \node[prod] at (3.4, 1.25) {};
+    \node[lbl] at (2.7, 0.35) {fixed station sequence and layout};
+    \node[lbl] at (2.7, -0.45) {(a) station-bound line};
+
+    % =================================================================
+    % (b) line-less mobile assembly
+    % =================================================================
+    \draw[gray, rounded corners=2pt] (6.9, -0.05) rectangle (14.3, 3.0);
+    \node[lbl, anchor=north west, text=gray] at (6.95, 2.98)
+      {shared shop floor};
+    % group 1
+    \node[grp] (g1) at (8.1, 1.75) {};
+    \node[prod] at (8.1, 1.75) {};
+    \node[res] at (7.78, 2.02) {};
+    \node[res] (r1) at (8.42, 1.98) {};
+    \node[wrk] at (8.1, 1.38) {};
+    % group 2
+    \node[grp] (g2) at (10.4, 0.85) {};
+    \node[prod] (p2) at (10.4, 0.85) {};
+    \node[res] at (10.08, 1.1) {};
+    \node[res] at (10.72, 0.62) {};
+    % group 3
+    \node[grp] (g3) at (13.2, 1.95) {};
+    \node[prod] at (13.2, 1.95) {};
+    \node[res] at (13.5, 2.2) {};
+    \node[wrk] at (12.9, 2.2) {};
+    % a resource changes its assignment
+    \draw[move] (r1) to[bend left=14] (g3.west);
+    \node[lbl] at (10.6, 2.55) {resource relocates};
+    % a product changes its location
+    \node[nextprod] (p2n) at (13.4, 0.85) {};
+    \draw[move] (g2.east) -- (p2n.west);
+    \node[lbl] at (12.4, 0.45) {product relocates};
+    \node[lbl] at (10.6, -0.45) {(b) line-less mobile assembly};
+
+    % =================================================================
+    % legend
+    % =================================================================
+    \node[prod] at (1.2, -1.2) {};
+    \node[lbl, anchor=west] at (1.4, -1.2) {product on its carrier};
+    \node[res] at (4.9, -1.2) {};
+    \node[lbl, anchor=west] at (5.1, -1.2)
+      {robot or mobile manipulator};
+    \node[wrk] at (9.3, -1.2) {};
+    \node[lbl, anchor=west] at (9.5, -1.2) {worker};
+    \node[grp, minimum size=3.2mm] at (11.2, -1.2) {};
+    \node[lbl, anchor=west] at (11.45, -1.2) {current assignment};
+  \end{tikzpicture}
+  \caption[Station-bound assembly line and line-less mobile assembly
+    system]{%
+    Station-bound assembly line and line-less mobile assembly system.
+    (a) Every product passes the stations S1 to S4 in the same order,
+    and each station keeps its own resources. (b) Products and resources
+    are mobile entities on a shared shop floor; which resources serve
+    which product, in what order and at which location is planned at run
+    time. Schematic drawn after the descriptions
+    in~\cite{Huettemann2016LMAS,Huettemann2019LMAS,Buckhorst2019Planning}.}
+  \label{fig:line-vs-lmas}
+\end{figure}
 
 A central enabler of the LMAS concept is the \emph{mobile manipulator}:
 a robotic arm mounted on a mobile base

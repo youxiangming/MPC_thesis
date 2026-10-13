@@ -32,11 +32,11 @@ with non-holonomic base, safety-panel joint limits, and a reduced
 self-collision set was parameterised for on-robot operation (\cref{sec:wholebody-model});
 and an MRT bridge turns the published policy into wheel and joint
 commands under explicit guards (\cref{sec:hw-interfaces}). Third, a
-simulation-based acceptance path was built around Experiment~A: the same
-task file and waypoint list that the robot will load are exercised in a
-dummy MRT loop, with internal metrology and ISO-oriented path metrics
-defined before any hardware session, and the lap that loop leaves
-tracks the commanded box at \qty{11}{\milli\meter} RMS
+simulation-based acceptance path was built around Experiment~A: the
+task file and waypoint list that the robot loads are exercised in a
+dummy MRT loop, internal metrology and ISO-oriented path metrics score
+that loop and the hardware laps alike, and on the archived files the
+dummy loop tracks the commanded box at \qty{11}{\milli\meter} RMS
 (\cref{tab:sim-residual}). Fourth, that
 configuration was taken through mock \texttt{ros2\_control} hardware and
 onto the physical platform. The closed eight-corner path of
@@ -70,9 +70,9 @@ sign by the time the bridge samples it (\cref{fig:hw-policy-u}). Over
 that sample the robot receives a base command opposite to the one the
 solver computed. The mock lap, read the same way, carries no such pulse
 at all: its base command starts an order of magnitude below the bound
-and barely changes across its own lag. The difference between the two
-plants is therefore not only that one reads its policy later, but that
-only one of them provokes the plan that is unsafe to read late.
+and barely changes across its own lag. Both plants read their policies
+late. Only the physical platform provokes a plan that is unsafe to read
+late.
 
 Several constraints bound how strongly these results can be read. All
 desired and attained poses were reconstructed from wheel odometry and
@@ -87,11 +87,7 @@ control over the platform's wireless link. The \ocs{} model treats the
 base as a velocity integrator and knows nothing of the drive
 controller's acceleration limit or of the UR10e following error under
 streaming position
-control~\cite{HenkelRoth2019freeMoVe,UR10e}. Finally, no decoupled
-Nav2 plus MoveIt baseline was run on the same path, so the thesis
-validates whole-body execution and characterises its residual; it does
-not yet demonstrate superiority over sequential planning on identical
-metrics~\cite{Macenski2020Nav2,moveit2}.
+control~\cite{HenkelRoth2019freeMoVe,UR10e}.
 
 \Cref{fig:requirements-trace} collects the requirements R1 to R7 of
 \cref{tab:requirements}, what realises each one in the integrated system,
@@ -189,9 +185,10 @@ The experiments answer a narrower question than the LMAS motivation of
 \ee{} reference, published as \ocs{} \texttt{TargetTrajectories} rather
 than as a sequence of static goals, can be executed end to end on
 \hero{} hardware by a receding-horizon whole-body controller, and they
-localise the largest tracking gap to the plant and to model mismatch
-rather than to a broken data pipeline or a reference that the dummy
-already rejects. They do not, by themselves, establish that this
+localise the largest tracking gap to the plant and to the policy lag
+acting on a model that treats that plant as an integrator, rather than
+to a broken data pipeline or to a reference that the optimiser cannot
+track on its own model. They do not, by themselves, establish that this
 pipeline meets production accuracy requirements, nor that whole-body
 \mpc{} outperforms a well-tuned decoupled stack on task completion time
 or corner accuracy.
@@ -203,15 +200,15 @@ $e_{\mathrm{p}}$ and the along-track lag $t_{\mathrm{lag}}$ of
 controller, because desired and attained poses share the same
 observation time and the same state estimate. Hausdorff distance and its
 mean and percentile variants (\cref{eq:mean-hausdorff}) remove the
-assumption of a common speed profile and are the right preparatory step for a later
-comparison with a pose-to-pose baseline, but with $n=1$ cycle they still
+assumption of a common speed profile, but with $n=1$ cycle they still
 do not yield ISO path accuracy $\mathrm{AT}_{p}$ or repeatability
 $\mathrm{RT}_{p}$ in the sense of ISO~9283~\cite{ISO9283}.
 
 The split between mock and hardware results is instructive in what it
 rules out. Mock hardware preserves policy lag, velocity clamps, and the
-Zenoh hop; when it tracks well, the reference geometry, the \ocs{} time
-axis, and the cost tuning are not the dominant fault. What remains has two
+Zenoh hop; since it tracks at \qty{27}{\milli\meter} RMS, the reference
+geometry, the \ocs{} time axis, and the cost tuning are not the dominant
+fault. What remains has two
 parts, and they carry different weight. The sign reversal of
 \cref{fig:hw-policy-u} is measured, and it explains why an error that
 exceeds the pure lag prediction $0.36\,\mathrm{s}\times
@@ -219,11 +216,11 @@ v_{\mathrm{ref}}$ can persist through a dwell: a command of the wrong
 sign does not stop being wrong when the reference stops moving. Why the
 solver places its correction there is the second part, and it is still
 inferred rather than shown. The kinematic integrator of
-\cref{sec:wholebody-model} lets an arbitrarily large velocity at
-$\tau=0$ cancel a position error within one time step, and nothing in
-the model charges the \qty{400}{\kilo\gram} platform for the
-acceleration that would require, so a plan that front-loads the
-correction is optimal on the model and infeasible on the robot.
+\cref{sec:wholebody-model} lets the base velocity step to its
+\qty{0.1}{\meter\per\second} bound at $\tau=0$, and nothing in the model
+charges the \qty{400}{\kilo\gram} platform for the acceleration that
+step would require, so a plan that front-loads the correction is optimal
+on the model and infeasible on the robot.
 Separating that from wheel slip, odometry drift and arm tracking error
 would need additional sensing or deliberately simpler motions.
 
@@ -231,11 +228,11 @@ Scope limits are finally worth stating plainly. One mobile manipulator,
 one closed path, and one lap per plant are enough to debug integration
 and to expose the main failure modes; they are not enough to support
 statistical claims about repeatability or about behaviour across the
-workspace. The progression from RViz single-goal regulation to
-time-parameterised trajectory tracking via the waypoint node
-(\cref{sec:sim-node}) is a real extension of the upstream \ocs{} demo,
-but the evaluation has so far exercised only the tracking regime on a
-single box geometry.
+workspace. The waypoint node of \cref{sec:sim-node} extends the upstream
+\ocs{} example, which regulates to a single goal set by an interactive
+marker in RViz, to the tracking of a time-parameterised
+trajectory~\cite{ocs2Toolbox}. The evaluation has so far exercised only
+that tracking regime, on a single box geometry.
 
 % ---------------------------------------------------------------------
 \section{Recommendations for Resolving Present Issues}
@@ -259,8 +256,9 @@ belong to that session rather than to the laps of \cref{ch:hardware},
 but the split suggests attacking warm-start cost and rollout search
 before adding SLQ iterations. Pinning the solver threads
 away from unrelated PC load, keeping the Release build used here,
-and revisiting the twelve-pair self-collision set if distance queries
-still dominate are practical first steps. Enabling a feedback policy
+and revisiting the twelve-pair self-collision set if profiling shows
+that distance queries dominate those two stages are practical first
+steps. Enabling a feedback policy
 (\texttt{useFeedbackPolicy=true} in the task file; currently disabled in
 \cref{tab:mpc-config}) would let the bridge use linear gains between
 sparse policy updates~\cite{Grandia2019FeedbackMPC,ocs2Toolbox}; the
@@ -270,8 +268,9 @@ file, prevents exhaustion when a solve spikes; it does not restore the
 aggressive $\tau=0$ input that lag already consumes (\cref{fig:hw-lag}).
 
 \paragraph{Close the model--plant gap on the base.}
-The largest hardware residual appears where the base must translate while
-the arm holds orientation, and it does not relax when the reference stops.
+The two largest per-edge residuals on the robot are on horizontal edges
+(edges 3 and~6 of \cref{tab:hw-segments}), where the base can take part
+in the motion, and the residual does not relax when the reference stops.
 Adding an acceleration limit or a first-order lag on base velocities
 inside the \ocs{} model would align the optimiser with what the
 freeMoVe drive stack enforces and reduce the state mismatch that each
@@ -292,27 +291,81 @@ odometry only
 \end{sloppypar}
 
 \paragraph{Complete the evaluation programme.}
-Three items would turn the present characterisation into a comparative
-study aligned with \cref{sec:objectives}. A decoupled Nav2 plus MoveIt
-baseline on the same corner set would supply $\mathrm{AP}_{p}$ and task
-time on common footing
-(\cref{sec:sim-path-metrics})~\cite{Macenski2020Nav2,moveit2}. ISO
+Two items would complete the present characterisation. ISO
 Table~3 speed levels and $n\ge 3$ cycles on the whole-body pipeline would
 populate $\mathrm{AT}_{p}$ and $\mathrm{RT}_{p}$~\cite{ISO9283}.
 Re-running the mock versus hardware comparison over a wireless Zenoh link
 would test whether the Ethernet sessions of \cref{sec:hw-deployment} bias
-the timing budget optimistically~\cite{zenoh}. Of these, one experiment is prior to the
-rest. The sign reversal of \cref{fig:hw-policy-u} predicts that the
-hardware residual is driven by \emph{when} the policy is read rather
-than by what the plant does with it, and that prediction is falsifiable
-with the apparatus already in place: re-run the same files with the lag
-compensated, by a feedback policy, by evaluating the plan at the time it
-will actually be applied, or simply by a solve short enough that
-$\tau=0$ is still in the future, and measure whether the
-\qty{130}{\milli\meter} moves towards the \qty{27}{\milli\meter} of
-the mock plant. If it does, the gap is a timing problem and the model
-can stay kinematic. If it does not, the correction sits in the model,
-and an acceleration-limited base is the next thing to build. Everything
-else in this section is worth doing; this is the measurement that
-decides which of the two readings of \cref{sec:concl-reflection} is
-right.
+the timing budget optimistically~\cite{zenoh}.
+
+\paragraph{Run the lag-compensation experiment first.}
+One experiment is prior to every item above. The sign reversal of
+\cref{fig:hw-policy-u} predicts that the hardware residual is driven by
+\emph{when} the policy is read rather than by what the plant does with
+it, and that prediction is falsifiable on the same robot with the same
+files: re-run the lap with the lag compensated, and measure whether the
+\qty{130}{\milli\meter} moves towards the \qty{27}{\milli\meter} of the
+mock plant. The lag can be compensated by the feedback policy named
+above, by starting each solve from the state predicted for the instant
+at which its policy will be read, or by a solve short enough that the
+bridge reads the prefix it now skips. If the residual moves, the gap is
+a timing problem and the model can stay kinematic. If it does not, the
+correction sits in the model, and an acceleration-limited base is the
+next thing to build. The recorded laps cannot decide between these two
+readings (\cref{sec:concl-reflection}); this measurement can.
+\Cref{fig:deciding-experiment} lays out that decision.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=4pt, text width=108mm},
+      dec/.style={draw, thick, rounded corners=7pt, align=center,
+                  inner sep=5pt, text width=80mm},
+      verdict/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=4pt, text width=58mm, minimum height=18mm,
+                  fill=gray!10},
+      nxt/.style={draw, rounded corners=1pt, align=center,
+                  inner sep=4pt, text width=58mm, minimum height=13mm},
+      flow/.style={-{Latex[length=2mm]}, thick},
+      lbl/.style={font=\scriptsize, align=center},
+      node distance=6mm,
+    ]
+    \node[box] (obs)
+      {measured: $e_{\mathrm{p}}$ RMS \qty{130}{\milli\meter} on
+       hardware against \qty{27}{\milli\meter} on mock hardware
+       (\cref{tab:hw-metrics}); the base command changes sign at the lag
+       at which the policy is read (\cref{fig:hw-policy-u})};
+    \node[box, below=of obs] (exp)
+      {proposed: repeat the lap on the same task and waypoint files
+       with the policy lag compensated};
+    \node[dec, below=of exp] (q)
+      {does $e_{\mathrm{p}}$ RMS move from \qty{130}{\milli\meter}
+       towards \qty{27}{\milli\meter}?};
+    \node[verdict, anchor=north] (timing) at ($(q.south)+(-3.4,-1.1)$)
+      {timing: the residual is set by when the policy is read; the
+       model can stay kinematic};
+    \node[verdict, anchor=north] (model) at ($(q.south)+(3.4,-1.1)$)
+      {model: the correction belongs in the\\model of the base};
+    \node[nxt, below=of timing] (rate)
+      {raise the effective \mpc{} rate and shorten the policy lag};
+    \node[nxt, below=of model] (acc)
+      {add an acceleration limit on the base velocities to the \ocs{}
+       model};
+    \draw[flow] (obs) -- (exp);
+    \draw[flow] (exp) -- (q);
+    \draw[flow] (q.south) -- ++(0,-0.6) -| (timing.north)
+      node[lbl, pos=0.25, above, inner sep=1.5pt] {yes};
+    \draw[flow] (q.south) -- ++(0,-0.6) -| (model.north)
+      node[lbl, pos=0.25, above, inner sep=1.5pt] {no};
+    \draw[flow] (timing) -- (rate);
+    \draw[flow] (model) -- (acc);
+  \end{tikzpicture}
+  \caption[Decision settled by the lag-compensation experiment]{%
+    Decision settled by the lag-compensation experiment. The two values
+    are those of \cref{tab:hw-metrics}. The experiment itself has not
+    been run; the lower two rows are the outcomes it would separate and
+    the recommendation of this section that each outcome leads to.}
+  \label{fig:deciding-experiment}
+\end{figure}

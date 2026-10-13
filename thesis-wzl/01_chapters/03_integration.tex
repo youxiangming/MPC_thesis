@@ -169,6 +169,139 @@ state components attached to them.
   \label{fig:hero-frames}
 \end{figure}
 
+\Cref{fig:hero-frames} is a reduction. The transform tree that the
+running system publishes has 51 frames and is shown in full in
+\cref{fig:tf-tree}. Ten of its 50 transforms change over time: the base
+pose, the six arm joints, the two wheel joints, and the pose of the
+\ee{} target, which the \ocs{} visualisation adds for display. All
+other frames are attachments, sensors and tool frames that are rigidly
+fixed to one of the frames on the trunk.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\scriptsize,
+      fr/.style={draw, rounded corners=1pt, font=\scriptsize\ttfamily,
+                 inner sep=2pt, minimum height=5mm, minimum width=31mm},
+      side/.style={draw=gray, rounded corners=1pt, fill=gray!10,
+                   font=\scriptsize\ttfamily\linespread{1}\selectfont,
+                   align=left, inner sep=2.5pt, anchor=west},
+      wide/.style={side, text width=76mm},
+      sidemov/.style={side, draw=RWTHBlau100, fill=white},
+      mov/.style={-{Latex[length=1.8mm]}, very thick, RWTHBlau100},
+      fix/.style={-{Latex[length=1.6mm]}, thin},
+      att/.style={gray},
+      lbl/.style={font=\scriptsize\linespread{1}\selectfont, align=right},
+      note/.style={-{Latex[length=1.4mm]}, gray},
+    ]
+    % --- trunk ------------------------------------------------------
+    \node[fr] (world) at (0, 0)      {world};
+    \node[fr] (fp)    at (0, -0.95)  {footprint};
+    \node[fr] (ch)    at (0, -2.25)  {chassis};
+    \node[fr] (mt)    at (0, -3.55)  {ur\_mount};
+    \node[fr] (bl)    at (0, -4.5)   {base\_link};
+    \node[fr] (bi)    at (0, -5.45)  {base\_link\_inertia};
+    \node[fr] (sh)    at (0, -6.4)   {shoulder\_link};
+    \node[fr] (ua)    at (0, -7.35)  {upper\_arm\_link};
+    \node[fr] (fa)    at (0, -8.45)  {forearm\_link};
+    \node[fr] (w1)    at (0, -9.5)   {wrist\_1\_link};
+    \node[fr] (w2)    at (0, -10.4)  {wrist\_2\_link};
+    \node[fr] (w3)    at (0, -11.3)  {wrist\_3\_link};
+    \node[fr] (fl)    at (0, -12.2)  {flange};
+    \node[fr] (t0)    at (0, -13.2)  {tool0};
+
+    \draw[mov] (world) -- (fp);
+    \draw[fix] (fp) -- (ch);
+    \draw[fix] (ch) -- (mt);
+    \draw[fix] (mt) -- (bl);
+    \draw[fix] (bl) -- (bi);
+    \draw[mov] (bi) -- (sh);
+    \draw[mov] (sh) -- (ua);
+    \draw[mov] (ua) -- (fa);
+    \draw[mov] (fa) -- (w1);
+    \draw[mov] (w1) -- (w2);
+    \draw[mov] (w2) -- (w3);
+    \draw[fix] (w3) -- (fl);
+    \draw[fix] (fl) -- (t0);
+
+    % --- frames that move but are not on the trunk -------------------
+    \node[sidemov] (cmd) at (2.3, 0) {command};
+    \draw[mov] (world.east) -- (cmd.west);
+    \node[lbl, anchor=west, align=left] at (cmd.east)
+      {\ee{} target, for display};
+    \node[sidemov] (wh) at (2.3, -1.6) {wheel\_left, wheel\_right};
+    \draw[mov] (ch.east) -- (wh.west);
+
+    % --- frames rigidly attached to a trunk frame --------------------
+    \node[wide] (chs) at (2.3, -2.95)
+      {hmi\\
+       caster\_front\_left, caster\_front\_right,
+       caster\_rear\_left, caster\_rear\_right\\
+       laser\_scanner\_front, laser\_scanner\_front\_right,
+       laser\_scanner\_left, laser\_scanner\_rear,
+       laser\_scanner\_rear\_left};
+    \draw[att] (ch.east) -- (chs.west);
+    \node[wide] (bls) at (2.3, -4.5)
+      {base $\to$ \{platform\_markers, smartshift\_tool\_pocket\_A,
+       smartshift\_tool\_pocket\_B\}};
+    \draw[att] (bl.east) -- (bls.west);
+    \node[side] (shs) at (2.3, -6.4) {ring1};
+    \draw[att] (sh.east) -- (shs.west);
+    \node[wide] (uas) at (2.3, -7.35)
+      {ring2, ring2b, tube\_holder\_bottom\_1 $\to$ tmac\_box,
+       tube\_holder\_bottom\_2};
+    \draw[att] (ua.east) -- (uas.west);
+    \node[wide] (fas) at (2.3, -8.45)
+      {ring3, tube\_holder\_bottom\_3 $\to$ tube\_holder\_top\_3,
+       tube\_holder\_bottom\_4 $\to$ tube\_holder\_top\_4};
+    \draw[att] (fa.east) -- (fas.west);
+    \node[side] (w1s) at (2.3, -9.5) {ring4};
+    \draw[att] (w1.east) -- (w1s.west);
+    \node[side] (w2s) at (2.3, -10.4) {ring5};
+    \draw[att] (w2.east) -- (w2s.west);
+    \node[side] (w3s) at (2.3, -11.3) {ft\_frame};
+    \draw[att] (w3.east) -- (w3s.west);
+    \node[wide] (t0s) at (2.3, -13.2)
+      {ring6 $\to$ \{tool\_peg, tool\_tmac, smartshift\_robot\_adapter
+       $\to$ smartshift\_tool\_adapter $\to$ tool\_smartshift\_mft\}};
+    \draw[att] (t0.east) -- (t0s.west);
+
+    % --- left-hand annotations --------------------------------------
+    \node[lbl, anchor=west] at (0.2, -0.475)
+      {base pose $(p_x, p_y, \psi)$};
+    \node[lbl, anchor=east] (nfp) at (-2.3, -0.95)
+      {model base frame};
+    \draw[note] (nfp.east) -- (fp.west);
+    \draw[RWTHBlau100, thick] (-1.85, -5.925) -- (-2.05, -5.925)
+      -- (-2.05, -10.85) -- (-1.85, -10.85);
+    \node[lbl, anchor=east] at (-2.2, -8.39)
+      {six arm joints\\$\qarm \in \mathbb{R}^{6}$};
+    \node[lbl, anchor=east] (nt0) at (-2.3, -13.2) {\ee{} frame};
+    \draw[note] (nt0.east) -- (t0.west);
+
+    % --- legend -----------------------------------------------------
+    \draw[mov] (-3.9, -14.3) -- (-3.1, -14.3);
+    \node[lbl, anchor=west] at (-3.0, -14.3) {changes over time};
+    \draw[fix] (0.2, -14.3) -- (1.0, -14.3);
+    \node[lbl, anchor=west] at (1.1, -14.3) {static};
+    \node[side, minimum width=7mm, minimum height=3.2mm] at (3.0, -14.3) {};
+    \node[lbl, anchor=west, align=left] at (3.8, -14.3)
+      {frames fixed to the trunk frame on their left};
+  \end{tikzpicture}
+  \caption[Complete transform tree of \hero{}]{%
+    Complete transform tree of \hero{}, redrawn from a
+    \texttt{view\_frames} recording taken while the \ocs{} visualisation
+    was running. The trunk runs from \texttt{world} to the \ee{} frame
+    \texttt{tool0}. Thick blue arrows are the ten transforms that change
+    over time; every other transform is static. A grey box lists the
+    frames attached to the trunk frame on its left, and an arrow inside a
+    box leads to a further child. The operator panel \texttt{hmi}, the
+    tube holders and the marker rings \texttt{ring2} to \texttt{ring6}
+    reappear among the bodies of the self-collision model in
+    \cref{sec:wholebody-model}.}
+  \label{fig:tf-tree}
+\end{figure}
+
 Beyond the drives, the platform carries five SICK safety laser scanners,
 two safety controllers, wheel brakes, and an operator panel. None of
 these enters the \mpc{} loop. The controller described here consumes
@@ -709,6 +842,40 @@ set does not see.
     \bottomrule
   \end{tabularx}
 \end{table}
+
+\Cref{fig:selfcollision-postures} shows two arm postures in which the
+wrist comes close to the chassis. In both, the elbow is raised and the
+forearm points downwards. In the first posture the three wrist links
+arrive at the edge of the chassis top. In the second the forearm reaches
+past that edge, and the wrist links lie beside the side wall of the
+chassis, below the top plate. The pairs concerned are those of
+\texttt{chassis} with \texttt{forearm\_link} and with
+\texttt{wrist\_1\_link} to \texttt{wrist\_3\_link}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.544\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{selfcollision_wrist_plate_edge.png}
+    \caption{Wrist links at the edge of the chassis top}
+    \label{fig:selfcollision-plate-edge}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.436\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{selfcollision_wrist_side_wall.png}
+    \caption{Wrist links beside the side wall of the chassis}
+    \label{fig:selfcollision-side-wall}
+  \end{subfigure}
+  \caption[Arm postures in which the wrist comes close to the chassis]{%
+    Arm postures in which the wrist comes close to the chassis, drawn
+    with the collision bodies of the model in RViz. Red bodies are the
+    chassis, the operator panel (\texttt{hmi}) and the arm links; marker
+    rings and tube holders are grey. Each green arrow joins the closest
+    points of one body pair that the distance node evaluates. The green
+    text is the label output of that node and is not evaluated here.}
+  \label{fig:selfcollision-postures}
+\end{figure}
 
 The solver settings and the horizon are collected in
 \cref{tab:mpc-config}. Three of them interact and are worth spelling
